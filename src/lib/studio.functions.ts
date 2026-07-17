@@ -70,7 +70,7 @@ export const generateScript = createServerFn({ method: "POST" })
         project_id: project.id,
         kind: "script",
         status: "running",
-        input_json: data as unknown as Record<string, unknown>,
+        input_json: data as unknown as never,
         started_at: new Date().toISOString(),
       })
       .select()
@@ -94,7 +94,7 @@ export const generateScript = createServerFn({ method: "POST" })
           hook: script.hook,
           voiceover_text: script.voiceover,
           duration_s: data.duration,
-          beats_json: script.scenes as unknown as Record<string, unknown>,
+          beats_json: script.scenes as unknown as never,
         })
         .select()
         .single();
@@ -104,7 +104,7 @@ export const generateScript = createServerFn({ method: "POST" })
         .insert({
           project_id: project.id,
           owner_id: context.userId,
-          scenes_json: script.scenes as unknown as Record<string, unknown>,
+          scenes_json: script.scenes as unknown as never,
         });
 
       // Debit credits

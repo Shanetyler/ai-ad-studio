@@ -57,7 +57,7 @@ export const researchBrand = createServerFn({ method: "POST" })
         secondary_color: research.secondary_color ?? null,
         tone: research.tone ?? null,
         tagline: research.tagline ?? null,
-        extracted_json: research as unknown as Record<string, unknown>,
+        extracted_json: research as unknown as never,
       })
       .select()
       .single();
