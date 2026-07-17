@@ -14,16 +14,464 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      assets: {
+        Row: {
+          created_at: string
+          duration_s: number | null
+          external_url: string | null
+          id: string
+          kind: string
+          meta: Json | null
+          owner_id: string
+          project_id: string | null
+          storage_path: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_s?: number | null
+          external_url?: string | null
+          id?: string
+          kind: string
+          meta?: Json | null
+          owner_id: string
+          project_id?: string | null
+          storage_path?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_s?: number | null
+          external_url?: string | null
+          id?: string
+          kind?: string
+          meta?: Json | null
+          owner_id?: string
+          project_id?: string | null
+          storage_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assets_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_assets: {
+        Row: {
+          brand_id: string
+          created_at: string
+          id: string
+          kind: string
+          meta: Json | null
+          owner_id: string
+          storage_path: string
+        }
+        Insert: {
+          brand_id: string
+          created_at?: string
+          id?: string
+          kind: string
+          meta?: Json | null
+          owner_id: string
+          storage_path: string
+        }
+        Update: {
+          brand_id?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          meta?: Json | null
+          owner_id?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_assets_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brands: {
+        Row: {
+          created_at: string
+          extracted_json: Json | null
+          guidelines_md: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          owner_id: string
+          primary_color: string | null
+          secondary_color: string | null
+          tagline: string | null
+          tone: string | null
+          updated_at: string
+          website_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          extracted_json?: Json | null
+          guidelines_md?: string | null
+          id?: string
+          logo_url?: string | null
+          name: string
+          owner_id: string
+          primary_color?: string | null
+          secondary_color?: string | null
+          tagline?: string | null
+          tone?: string | null
+          updated_at?: string
+          website_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          extracted_json?: Json | null
+          guidelines_md?: string | null
+          id?: string
+          logo_url?: string | null
+          name?: string
+          owner_id?: string
+          primary_color?: string | null
+          secondary_color?: string | null
+          tagline?: string | null
+          tone?: string | null
+          updated_at?: string
+          website_url?: string | null
+        }
+        Relationships: []
+      }
+      credit_ledger: {
+        Row: {
+          created_at: string
+          delta: number
+          id: string
+          job_id: string | null
+          reason: string
+          stripe_event_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          delta: number
+          id?: string
+          job_id?: string | null
+          reason: string
+          stripe_event_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          delta?: number
+          id?: string
+          job_id?: string | null
+          reason?: string
+          stripe_event_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_ledger_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jobs: {
+        Row: {
+          cost_credits: number
+          created_at: string
+          error: string | null
+          finished_at: string | null
+          id: string
+          input_json: Json | null
+          kind: Database["public"]["Enums"]["job_kind"]
+          model_id: string | null
+          output_json: Json | null
+          owner_id: string
+          progress: number
+          project_id: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["job_status"]
+        }
+        Insert: {
+          cost_credits?: number
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          input_json?: Json | null
+          kind: Database["public"]["Enums"]["job_kind"]
+          model_id?: string | null
+          output_json?: Json | null
+          owner_id: string
+          progress?: number
+          project_id?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["job_status"]
+        }
+        Update: {
+          cost_credits?: number
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          input_json?: Json | null
+          kind?: Database["public"]["Enums"]["job_kind"]
+          model_id?: string | null
+          output_json?: Json | null
+          owner_id?: string
+          progress?: number
+          project_id?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["job_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jobs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          default_brand_id: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          default_brand_id?: string | null
+          email?: string | null
+          full_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          default_brand_id?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      projects: {
+        Row: {
+          brand_id: string | null
+          brief: string | null
+          created_at: string
+          id: string
+          owner_id: string
+          status: string
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          brand_id?: string | null
+          brief?: string | null
+          created_at?: string
+          id?: string
+          owner_id: string
+          status?: string
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string | null
+          brief?: string | null
+          created_at?: string
+          id?: string
+          owner_id?: string
+          status?: string
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scripts: {
+        Row: {
+          beats_json: Json | null
+          created_at: string
+          duration_s: number | null
+          hook: string | null
+          id: string
+          owner_id: string
+          project_id: string
+          title: string | null
+          voiceover_text: string | null
+        }
+        Insert: {
+          beats_json?: Json | null
+          created_at?: string
+          duration_s?: number | null
+          hook?: string | null
+          id?: string
+          owner_id: string
+          project_id: string
+          title?: string | null
+          voiceover_text?: string | null
+        }
+        Update: {
+          beats_json?: Json | null
+          created_at?: string
+          duration_s?: number | null
+          hook?: string | null
+          id?: string
+          owner_id?: string
+          project_id?: string
+          title?: string | null
+          voiceover_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scripts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      storyboards: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          project_id: string
+          scenes_json: Json
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          project_id: string
+          scenes_json: Json
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          project_id?: string
+          scenes_json?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "storyboards_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          current_period_end: string | null
+          monthly_credit_grant: number
+          seats: number
+          status: string | null
+          stripe_customer_id: string | null
+          stripe_sub_id: string | null
+          tier: Database["public"]["Enums"]["sub_tier"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          current_period_end?: string | null
+          monthly_credit_grant?: number
+          seats?: number
+          status?: string | null
+          stripe_customer_id?: string | null
+          stripe_sub_id?: string | null
+          tier?: Database["public"]["Enums"]["sub_tier"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          current_period_end?: string | null
+          monthly_credit_grant?: number
+          seats?: number
+          status?: string | null
+          stripe_customer_id?: string | null
+          stripe_sub_id?: string | null
+          tier?: Database["public"]["Enums"]["sub_tier"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      credit_balance: { Args: { _user_id: string }; Returns: number }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
+      job_kind:
+        | "brand_research"
+        | "script"
+        | "storyboard"
+        | "image"
+        | "video"
+        | "tts"
+        | "music"
+        | "edit"
+      job_status: "queued" | "running" | "succeeded" | "failed" | "canceled"
+      sub_tier: "free" | "pro" | "business" | "enterprise"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +598,20 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+      job_kind: [
+        "brand_research",
+        "script",
+        "storyboard",
+        "image",
+        "video",
+        "tts",
+        "music",
+        "edit",
+      ],
+      job_status: ["queued", "running", "succeeded", "failed", "canceled"],
+      sub_tier: ["free", "pro", "business", "enterprise"],
+    },
   },
 } as const
