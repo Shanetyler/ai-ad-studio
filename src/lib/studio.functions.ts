@@ -50,7 +50,7 @@ export const generateScript = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => GenerateInput.parse(d))
   .handler(async ({ data, context }) => {
-    await requireCredits(context.supabase, context.userId, SCRIPT_COST);
+    await requireCredits(context, context.userId, SCRIPT_COST);
 
     // Brand context
     let brandCtx = "";
@@ -264,7 +264,7 @@ export const generateSceneVisuals = createServerFn({ method: "POST" })
     if (!scenes.length) throw new Error("Storyboard is empty");
 
     const cost = scenes.length * VISUAL_COST_PER_SCENE;
-    await requireCredits(context.supabase, context.userId, cost);
+    await requireCredits(context, context.userId, cost);
 
     const { data: project } = await context.supabase
       .from("projects")
