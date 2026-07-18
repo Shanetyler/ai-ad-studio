@@ -38,14 +38,12 @@ type ScriptOut = {
 const SCRIPT_COST = 4;
 const VISUAL_COST_PER_SCENE = 3;
 
-async function requireCredits(
-  supabase: { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: number | null }> },
-  userId: string,
-  cost: number,
-) {
+type SupaLike = { rpc: (fn: "credit_balance", args: { _user_id: string }) => Promise<{ data: number | null }> };
+async function requireCredits(supabase: SupaLike, userId: string, cost: number) {
   const { data: bal } = await supabase.rpc("credit_balance", { _user_id: userId });
   if ((bal ?? 0) < cost) throw new Error("Not enough credits. Top up to continue.");
 }
+
 
 export const generateScript = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -134,7 +132,7 @@ export const generateScript = createServerFn({ method: "POST" })
       .insert({
         owner_id: context.userId,
         project_id: project.id,
-        kind: `script:${data.mode}`,
+        kind: "script",
         status: "running",
         input_json: { ...data, imageDataUrl: data.imageDataUrl ? "[omitted]" : undefined } as unknown as never,
         started_at: new Date().toISOString(),
