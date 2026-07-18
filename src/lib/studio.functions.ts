@@ -38,11 +38,12 @@ type ScriptOut = {
 const SCRIPT_COST = 4;
 const VISUAL_COST_PER_SCENE = 3;
 
-type SupaLike = { rpc: (fn: "credit_balance", args: { _user_id: string }) => Promise<{ data: number | null }> };
-async function requireCredits(supabase: SupaLike, userId: string, cost: number) {
-  const { data: bal } = await supabase.rpc("credit_balance", { _user_id: userId });
-  if ((bal ?? 0) < cost) throw new Error("Not enough credits. Top up to continue.");
+type SupaCtx = { supabase: { rpc: (fn: "credit_balance", args: { _user_id: string }) => unknown } };
+async function requireCredits(ctx: SupaCtx, userId: string, cost: number) {
+  const res = (await (ctx.supabase.rpc("credit_balance", { _user_id: userId }) as Promise<{ data: number | null }>));
+  if ((res.data ?? 0) < cost) throw new Error("Not enough credits. Top up to continue.");
 }
+
 
 
 export const generateScript = createServerFn({ method: "POST" })
