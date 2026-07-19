@@ -450,6 +450,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      consume_credits: {
+        Args: {
+          _amount: number
+          _job_id?: string
+          _reason: string
+          _user_id: string
+        }
+        Returns: number
+      }
       credit_balance: { Args: { _user_id: string }; Returns: number }
       has_role: {
         Args: {
@@ -457,6 +466,15 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      refund_credits: {
+        Args: {
+          _amount: number
+          _job_id?: string
+          _reason: string
+          _user_id: string
+        }
+        Returns: undefined
       }
     }
     Enums: {

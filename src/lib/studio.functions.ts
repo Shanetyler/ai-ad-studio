@@ -38,10 +38,44 @@ type ScriptOut = {
 const SCRIPT_COST = 4;
 const VISUAL_COST_PER_SCENE = 3;
 
-type SupaCtx = { supabase: { rpc: (fn: "credit_balance", args: { _user_id: string }) => unknown } };
-async function requireCredits(ctx: SupaCtx, userId: string, cost: number) {
-  const res = (await (ctx.supabase.rpc("credit_balance", { _user_id: userId }) as Promise<{ data: number | null }>));
-  if ((res.data ?? 0) < cost) throw new Error("Not enough credits. Top up to continue.");
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type SupaLike = { supabase: any };
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+async function consumeCredits(
+  ctx: SupaLike,
+  userId: string,
+  amount: number,
+  reason: string,
+  jobId?: string | null,
+) {
+  const { error } = await ctx.supabase.rpc("consume_credits", {
+    _user_id: userId,
+    _amount: amount,
+    _reason: reason,
+    _job_id: jobId ?? null,
+  });
+  if (error) {
+    if (error.message.includes("INSUFFICIENT_CREDITS")) {
+      throw new Error("Not enough credits. Top up to continue.");
+    }
+    throw new Error(error.message);
+  }
+}
+
+async function refundCredits(
+  ctx: SupaLike,
+  userId: string,
+  amount: number,
+  reason: string,
+  jobId?: string | null,
+) {
+  await ctx.supabase.rpc("refund_credits", {
+    _user_id: userId,
+    _amount: amount,
+    _reason: reason,
+    _job_id: jobId ?? null,
+  });
 }
 
 
@@ -50,7 +84,7 @@ export const generateScript = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => GenerateInput.parse(d))
   .handler(async ({ data, context }) => {
-    await requireCredits(context, context.userId, SCRIPT_COST);
+
 
     // Brand context
     let brandCtx = "";
@@ -141,6 +175,23 @@ export const generateScript = createServerFn({ method: "POST" })
       .select()
       .single();
 
+    // Atomically deduct credits up-front. Throws INSUFFICIENT_CREDITS if too low.
+    try {
+      await consumeCredits(context, context.userId, SCRIPT_COST, `script_${data.mode}`, job?.id ?? null);
+    } catch (e) {
+      if (job) {
+        await context.supabase
+          .from("jobs")
+          .update({
+            status: "failed",
+            error: e instanceof Error ? e.message : "credit error",
+            finished_at: new Date().toISOString(),
+          })
+          .eq("id", job.id);
+      }
+      throw e;
+    }
+
     try {
       const { aiJson, aiImage } = await import("./ai-gateway.server");
       const targetScenes = Math.max(3, Math.round(data.duration / 5));
@@ -211,13 +262,6 @@ export const generateScript = createServerFn({ method: "POST" })
         scenes_json: script.scenes as unknown as never,
       });
 
-      await context.supabase.from("credit_ledger").insert({
-        user_id: context.userId,
-        delta: -SCRIPT_COST,
-        reason: `script_${data.mode}`,
-        job_id: job?.id ?? null,
-      });
-
       await context.supabase
         .from("jobs")
         .update({
@@ -240,6 +284,12 @@ export const generateScript = createServerFn({ method: "POST" })
       return { projectId: project.id, script };
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Unknown error";
+      // Refund the credits we deducted up-front since the generation failed.
+      try {
+        await refundCredits(context, context.userId, SCRIPT_COST, `refund_script_${data.mode}`, job?.id ?? null);
+      } catch (refundErr) {
+        console.error("credit refund failed", refundErr);
+      }
       if (job) {
         await context.supabase
           .from("jobs")
@@ -264,7 +314,36 @@ export const generateSceneVisuals = createServerFn({ method: "POST" })
     if (!scenes.length) throw new Error("Storyboard is empty");
 
     const cost = scenes.length * VISUAL_COST_PER_SCENE;
-    await requireCredits(context, context.userId, cost);
+
+    // Create job and atomically deduct credits before we spend gateway calls.
+    const { data: visualsJob } = await context.supabase
+      .from("jobs")
+      .insert({
+        owner_id: context.userId,
+        project_id: data.projectId,
+        kind: "image",
+        status: "running",
+        input_json: { scenes: scenes.length } as unknown as never,
+        started_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    try {
+      await consumeCredits(context, context.userId, cost, "scene_visuals", visualsJob?.id ?? null);
+    } catch (e) {
+      if (visualsJob) {
+        await context.supabase
+          .from("jobs")
+          .update({
+            status: "failed",
+            error: e instanceof Error ? e.message : "credit error",
+            finished_at: new Date().toISOString(),
+          })
+          .eq("id", visualsJob.id);
+      }
+      throw e;
+    }
 
     const { data: project } = await context.supabase
       .from("projects")
@@ -322,11 +401,31 @@ export const generateSceneVisuals = createServerFn({ method: "POST" })
       .update({ scenes_json: updated as unknown as never })
       .eq("id", sb.id);
 
-    await context.supabase.from("credit_ledger").insert({
-      user_id: context.userId,
-      delta: -cost,
-      reason: "scene_visuals",
-    });
+    // Refund credits for scenes that failed to render.
+    const succeededCount = updated.filter((s) => s.image_url).length;
+    const failedCount = updated.length - succeededCount;
+    const actualCost = succeededCount * VISUAL_COST_PER_SCENE;
+    if (failedCount > 0) {
+      const refund = failedCount * VISUAL_COST_PER_SCENE;
+      try {
+        await refundCredits(context, context.userId, refund, "scene_visuals_partial_refund", visualsJob?.id ?? null);
+      } catch (refundErr) {
+        console.error("visuals refund failed", refundErr);
+      }
+    }
+
+    if (visualsJob) {
+      await context.supabase
+        .from("jobs")
+        .update({
+          status: succeededCount > 0 ? "succeeded" : "failed",
+          progress: 100,
+          cost_credits: actualCost,
+          finished_at: new Date().toISOString(),
+          output_json: { succeeded: succeededCount, failed: failedCount } as unknown as never,
+        })
+        .eq("id", visualsJob.id);
+    }
 
     const firstImage = updated.find((s) => s.image_url)?.image_url;
     if (firstImage) {
