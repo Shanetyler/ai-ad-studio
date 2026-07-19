@@ -322,7 +322,7 @@ export const generateSceneVisuals = createServerFn({ method: "POST" })
       .insert({
         owner_id: context.userId,
         project_id: data.projectId,
-        kind: "scene_visuals",
+        kind: "image",
         status: "running",
         input_json: { scenes: scenes.length } as unknown as never,
         started_at: new Date().toISOString(),
