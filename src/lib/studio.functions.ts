@@ -315,7 +315,36 @@ export const generateSceneVisuals = createServerFn({ method: "POST" })
     if (!scenes.length) throw new Error("Storyboard is empty");
 
     const cost = scenes.length * VISUAL_COST_PER_SCENE;
-    await requireCredits(context, context.userId, cost);
+
+    // Create job and atomically deduct credits before we spend gateway calls.
+    const { data: visualsJob } = await context.supabase
+      .from("jobs")
+      .insert({
+        owner_id: context.userId,
+        project_id: data.projectId,
+        kind: "scene_visuals",
+        status: "running",
+        input_json: { scenes: scenes.length } as unknown as never,
+        started_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    try {
+      await consumeCredits(context, context.userId, cost, "scene_visuals", visualsJob?.id ?? null);
+    } catch (e) {
+      if (visualsJob) {
+        await context.supabase
+          .from("jobs")
+          .update({
+            status: "failed",
+            error: e instanceof Error ? e.message : "credit error",
+            finished_at: new Date().toISOString(),
+          })
+          .eq("id", visualsJob.id);
+      }
+      throw e;
+    }
 
     const { data: project } = await context.supabase
       .from("projects")
