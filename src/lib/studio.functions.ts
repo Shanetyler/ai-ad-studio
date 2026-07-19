@@ -38,10 +38,15 @@ type ScriptOut = {
 const SCRIPT_COST = 4;
 const VISUAL_COST_PER_SCENE = 3;
 
-type SupaCtx = { supabase: { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }> } };
+type SupaLike = {
+  supabase: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    rpc: (fn: any, args: any) => Promise<{ data: unknown; error: { message: string } | null }>;
+  };
+};
 
 async function consumeCredits(
-  ctx: SupaCtx,
+  ctx: SupaLike,
   userId: string,
   amount: number,
   reason: string,
@@ -62,7 +67,7 @@ async function consumeCredits(
 }
 
 async function refundCredits(
-  ctx: SupaCtx,
+  ctx: SupaLike,
   userId: string,
   amount: number,
   reason: string,
