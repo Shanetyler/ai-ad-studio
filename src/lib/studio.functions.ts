@@ -38,11 +38,7 @@ type ScriptOut = {
 const SCRIPT_COST = 4;
 const VISUAL_COST_PER_SCENE = 3;
 
-type SupaRpc = (
-  fn: "credit_balance" | "consume_credits" | "refund_credits",
-  args: Record<string, unknown>,
-) => Promise<{ data: unknown; error: { message: string } | null }>;
-type SupaCtx = { supabase: { rpc: SupaRpc } };
+type SupaCtx = { supabase: { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }> } };
 
 async function consumeCredits(
   ctx: SupaCtx,
