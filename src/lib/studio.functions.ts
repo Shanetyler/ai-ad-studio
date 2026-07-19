@@ -38,10 +38,46 @@ type ScriptOut = {
 const SCRIPT_COST = 4;
 const VISUAL_COST_PER_SCENE = 3;
 
-type SupaCtx = { supabase: { rpc: (fn: "credit_balance", args: { _user_id: string }) => unknown } };
-async function requireCredits(ctx: SupaCtx, userId: string, cost: number) {
-  const res = (await (ctx.supabase.rpc("credit_balance", { _user_id: userId }) as Promise<{ data: number | null }>));
-  if ((res.data ?? 0) < cost) throw new Error("Not enough credits. Top up to continue.");
+type SupaRpc = (
+  fn: "credit_balance" | "consume_credits" | "refund_credits",
+  args: Record<string, unknown>,
+) => Promise<{ data: unknown; error: { message: string } | null }>;
+type SupaCtx = { supabase: { rpc: SupaRpc } };
+
+async function consumeCredits(
+  ctx: SupaCtx,
+  userId: string,
+  amount: number,
+  reason: string,
+  jobId?: string | null,
+) {
+  const { error } = await ctx.supabase.rpc("consume_credits", {
+    _user_id: userId,
+    _amount: amount,
+    _reason: reason,
+    _job_id: jobId ?? null,
+  });
+  if (error) {
+    if (error.message.includes("INSUFFICIENT_CREDITS")) {
+      throw new Error("Not enough credits. Top up to continue.");
+    }
+    throw new Error(error.message);
+  }
+}
+
+async function refundCredits(
+  ctx: SupaCtx,
+  userId: string,
+  amount: number,
+  reason: string,
+  jobId?: string | null,
+) {
+  await ctx.supabase.rpc("refund_credits", {
+    _user_id: userId,
+    _amount: amount,
+    _reason: reason,
+    _job_id: jobId ?? null,
+  });
 }
 
 
