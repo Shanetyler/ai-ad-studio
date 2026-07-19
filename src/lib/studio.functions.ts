@@ -401,11 +401,31 @@ export const generateSceneVisuals = createServerFn({ method: "POST" })
       .update({ scenes_json: updated as unknown as never })
       .eq("id", sb.id);
 
-    await context.supabase.from("credit_ledger").insert({
-      user_id: context.userId,
-      delta: -cost,
-      reason: "scene_visuals",
-    });
+    // Refund credits for scenes that failed to render.
+    const succeededCount = updated.filter((s) => s.image_url).length;
+    const failedCount = updated.length - succeededCount;
+    const actualCost = succeededCount * VISUAL_COST_PER_SCENE;
+    if (failedCount > 0) {
+      const refund = failedCount * VISUAL_COST_PER_SCENE;
+      try {
+        await refundCredits(context, context.userId, refund, "scene_visuals_partial_refund", visualsJob?.id ?? null);
+      } catch (refundErr) {
+        console.error("visuals refund failed", refundErr);
+      }
+    }
+
+    if (visualsJob) {
+      await context.supabase
+        .from("jobs")
+        .update({
+          status: succeededCount > 0 ? "succeeded" : "failed",
+          progress: 100,
+          cost_credits: actualCost,
+          finished_at: new Date().toISOString(),
+          output_json: { succeeded: succeededCount, failed: failedCount } as unknown as never,
+        })
+        .eq("id", visualsJob.id);
+    }
 
     const firstImage = updated.find((s) => s.image_url)?.image_url;
     if (firstImage) {
