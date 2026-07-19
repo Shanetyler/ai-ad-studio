@@ -38,12 +38,9 @@ type ScriptOut = {
 const SCRIPT_COST = 4;
 const VISUAL_COST_PER_SCENE = 3;
 
-type SupaLike = {
-  supabase: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    rpc: (fn: any, args: any) => Promise<{ data: unknown; error: { message: string } | null }>;
-  };
-};
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type SupaLike = { supabase: any };
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 async function consumeCredits(
   ctx: SupaLike,
