@@ -86,7 +86,7 @@ export const generateScript = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => GenerateInput.parse(d))
   .handler(async ({ data, context }) => {
-    await requireCredits(context, context.userId, SCRIPT_COST);
+
 
     // Brand context
     let brandCtx = "";
