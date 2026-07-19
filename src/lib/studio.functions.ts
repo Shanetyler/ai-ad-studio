@@ -177,6 +177,23 @@ export const generateScript = createServerFn({ method: "POST" })
       .select()
       .single();
 
+    // Atomically deduct credits up-front. Throws INSUFFICIENT_CREDITS if too low.
+    try {
+      await consumeCredits(context, context.userId, SCRIPT_COST, `script_${data.mode}`, job?.id ?? null);
+    } catch (e) {
+      if (job) {
+        await context.supabase
+          .from("jobs")
+          .update({
+            status: "failed",
+            error: e instanceof Error ? e.message : "credit error",
+            finished_at: new Date().toISOString(),
+          })
+          .eq("id", job.id);
+      }
+      throw e;
+    }
+
     try {
       const { aiJson, aiImage } = await import("./ai-gateway.server");
       const targetScenes = Math.max(3, Math.round(data.duration / 5));
