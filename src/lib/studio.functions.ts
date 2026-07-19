@@ -262,13 +262,6 @@ export const generateScript = createServerFn({ method: "POST" })
         scenes_json: script.scenes as unknown as never,
       });
 
-      await context.supabase.from("credit_ledger").insert({
-        user_id: context.userId,
-        delta: -SCRIPT_COST,
-        reason: `script_${data.mode}`,
-        job_id: job?.id ?? null,
-      });
-
       await context.supabase
         .from("jobs")
         .update({
@@ -291,6 +284,12 @@ export const generateScript = createServerFn({ method: "POST" })
       return { projectId: project.id, script };
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Unknown error";
+      // Refund the credits we deducted up-front since the generation failed.
+      try {
+        await refundCredits(context, context.userId, SCRIPT_COST, `refund_script_${data.mode}`, job?.id ?? null);
+      } catch (refundErr) {
+        console.error("credit refund failed", refundErr);
+      }
       if (job) {
         await context.supabase
           .from("jobs")
