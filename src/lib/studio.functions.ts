@@ -443,7 +443,7 @@ export const listProjects = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("projects")
-      .select("id,title,status,thumbnail_url,created_at")
+      .select("id,title,status,thumbnail_url,video_status,mux_playback_id,created_at")
       .order("created_at", { ascending: false })
       .limit(50);
     if (error) throw new Error(error.message);
