@@ -43,20 +43,37 @@ function Dashboard() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {projects.map((p) => (
-            <Link
-              key={p.id}
-              to="/studio/$projectId"
-              params={{ projectId: p.id }}
-              className="panel group relative overflow-hidden p-6 transition-all hover:border-primary/40"
-            >
-              <div className="text-xs uppercase tracking-widest text-muted-foreground">{p.status}</div>
-              <div className="mt-2 line-clamp-2 font-display text-xl">{p.title}</div>
-              <div className="mt-6 text-xs text-muted-foreground">
-                {new Date(p.created_at).toLocaleDateString()}
-              </div>
-            </Link>
-          ))}
+          {projects.map((p) => {
+            const vs = (p as { video_status?: string }).video_status ?? "idle";
+            const thumb = p.thumbnail_url;
+            return (
+              <Link
+                key={p.id}
+                to="/studio/$projectId"
+                params={{ projectId: p.id }}
+                className="panel group relative overflow-hidden transition-all hover:border-primary/40"
+              >
+                <div className="relative aspect-video overflow-hidden bg-black/40">
+                  {thumb ? (
+                    <img src={thumb} alt={p.title} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="grid h-full w-full place-items-center text-muted-foreground">
+                      <Sparkles className="h-6 w-6" />
+                    </div>
+                  )}
+                  <div className="absolute left-3 top-3 rounded-full border border-border bg-background/70 px-2 py-0.5 text-[10px] uppercase tracking-widest backdrop-blur">
+                    {vs === "ready" ? "▶ ready" : vs === "idle" ? p.status : vs}
+                  </div>
+                </div>
+                <div className="p-5">
+                  <div className="line-clamp-2 font-display text-lg">{p.title}</div>
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    {new Date(p.created_at).toLocaleDateString()}
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       )}
     </AppShell>

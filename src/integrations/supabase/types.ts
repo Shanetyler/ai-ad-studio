@@ -273,37 +273,67 @@ export type Database = {
       }
       projects: {
         Row: {
+          aspect_ratio: string
           brand_id: string | null
           brief: string | null
           created_at: string
+          credits_used: number
+          duration_seconds: number | null
+          generated_model: string | null
           id: string
+          mux_asset_id: string | null
+          mux_playback_id: string | null
+          mux_upload_id: string | null
           owner_id: string
+          render_error: string | null
           status: string
+          supabase_video_path: string | null
           thumbnail_url: string | null
           title: string
           updated_at: string
+          video_status: string
         }
         Insert: {
+          aspect_ratio?: string
           brand_id?: string | null
           brief?: string | null
           created_at?: string
+          credits_used?: number
+          duration_seconds?: number | null
+          generated_model?: string | null
           id?: string
+          mux_asset_id?: string | null
+          mux_playback_id?: string | null
+          mux_upload_id?: string | null
           owner_id: string
+          render_error?: string | null
           status?: string
+          supabase_video_path?: string | null
           thumbnail_url?: string | null
           title?: string
           updated_at?: string
+          video_status?: string
         }
         Update: {
+          aspect_ratio?: string
           brand_id?: string | null
           brief?: string | null
           created_at?: string
+          credits_used?: number
+          duration_seconds?: number | null
+          generated_model?: string | null
           id?: string
+          mux_asset_id?: string | null
+          mux_playback_id?: string | null
+          mux_upload_id?: string | null
           owner_id?: string
+          render_error?: string | null
           status?: string
+          supabase_video_path?: string | null
           thumbnail_url?: string | null
           title?: string
           updated_at?: string
+          video_status?: string
         }
         Relationships: [
           {
