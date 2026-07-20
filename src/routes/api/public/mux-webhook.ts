@@ -78,7 +78,7 @@ export const Route = createFileRoute("/api/public/mux-webhook")({
             .from("jobs")
             .update({ status: "succeeded", finished_at: new Date().toISOString(), progress: 100 })
             .eq("project_id", projectId)
-            .eq("kind", "video_render")
+            .eq("kind", "video")
             .eq("status", "running");
         } else if (evt.type === "video.asset.errored") {
           await supabaseAdmin

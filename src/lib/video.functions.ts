@@ -100,7 +100,7 @@ export const startVideoRender = createServerFn({ method: "POST" })
       .insert({
         owner_id: userId,
         project_id: data.projectId,
-        kind: "video_render",
+        kind: "video",
         status: "queued",
         cost_credits: cost,
         model_id: "kwaivgi/kling-v2.1",
@@ -110,7 +110,7 @@ export const startVideoRender = createServerFn({ method: "POST" })
       .single();
     if (jErr) throw new Error(jErr.message);
 
-    await consume(context, userId, cost, "video_render", job.id);
+    await consume(context, userId, cost, "video", job.id);
 
     // Build a cinematic prompt combining scenes + brand
     const scenePrompt = scenes

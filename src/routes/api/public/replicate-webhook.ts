@@ -41,7 +41,7 @@ export const Route = createFileRoute("/api/public/replicate-webhook")({
             await supabaseAdmin.from("credit_ledger").insert({
               user_id: job.owner_id,
               delta: job.cost_credits,
-              reason: "video_render_failed",
+              reason: "video_failed",
               job_id: job.id,
             });
           }
