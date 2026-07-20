@@ -78,14 +78,14 @@ export const startVideoRender = createServerFn({ method: "POST" })
       .eq("project_id", data.projectId)
       .maybeSingle();
 
-    let brand: { name?: string; tone?: string; hooks?: string[] } | null = null;
+    let brand: { name: string | null; tone: string | null } | null = null;
     if (project.brand_id) {
       const { data: b } = await supabase
         .from("brands")
-        .select("name, tone, hooks")
+        .select("name, tone")
         .eq("id", project.brand_id)
-        .maybeSingle();
-      brand = b as typeof brand;
+        .maybeSingle<{ name: string | null; tone: string | null }>();
+      brand = b;
     }
 
     const duration = Math.min(
