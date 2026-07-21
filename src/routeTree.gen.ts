@@ -15,8 +15,6 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedBrandsRouteImport } from './routes/_authenticated/brands'
-import { Route as ApiPublicReplicateWebhookRouteImport } from './routes/api/public/replicate-webhook'
-import { Route as ApiPublicMuxWebhookRouteImport } from './routes/api/public/mux-webhook'
 import { Route as ApiPublicFalWebhookRouteImport } from './routes/api/public/fal-webhook'
 import { Route as AuthenticatedStudioNewRouteImport } from './routes/_authenticated/studio.new'
 import { Route as AuthenticatedStudioProjectIdRouteImport } from './routes/_authenticated/studio.$projectId'
@@ -50,17 +48,6 @@ const AuthenticatedBrandsRoute = AuthenticatedBrandsRouteImport.update({
   path: '/brands',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const ApiPublicReplicateWebhookRoute =
-  ApiPublicReplicateWebhookRouteImport.update({
-    id: '/api/public/replicate-webhook',
-    path: '/api/public/replicate-webhook',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicMuxWebhookRoute = ApiPublicMuxWebhookRouteImport.update({
-  id: '/api/public/mux-webhook',
-  path: '/api/public/mux-webhook',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiPublicFalWebhookRoute = ApiPublicFalWebhookRouteImport.update({
   id: '/api/public/fal-webhook',
   path: '/api/public/fal-webhook',
@@ -87,8 +74,6 @@ export interface FileRoutesByFullPath {
   '/studio/$projectId': typeof AuthenticatedStudioProjectIdRoute
   '/studio/new': typeof AuthenticatedStudioNewRoute
   '/api/public/fal-webhook': typeof ApiPublicFalWebhookRoute
-  '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
-  '/api/public/replicate-webhook': typeof ApiPublicReplicateWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -99,8 +84,6 @@ export interface FileRoutesByTo {
   '/studio/$projectId': typeof AuthenticatedStudioProjectIdRoute
   '/studio/new': typeof AuthenticatedStudioNewRoute
   '/api/public/fal-webhook': typeof ApiPublicFalWebhookRoute
-  '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
-  '/api/public/replicate-webhook': typeof ApiPublicReplicateWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -113,8 +96,6 @@ export interface FileRoutesById {
   '/_authenticated/studio/$projectId': typeof AuthenticatedStudioProjectIdRoute
   '/_authenticated/studio/new': typeof AuthenticatedStudioNewRoute
   '/api/public/fal-webhook': typeof ApiPublicFalWebhookRoute
-  '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
-  '/api/public/replicate-webhook': typeof ApiPublicReplicateWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -127,8 +108,6 @@ export interface FileRouteTypes {
     | '/studio/$projectId'
     | '/studio/new'
     | '/api/public/fal-webhook'
-    | '/api/public/mux-webhook'
-    | '/api/public/replicate-webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -139,8 +118,6 @@ export interface FileRouteTypes {
     | '/studio/$projectId'
     | '/studio/new'
     | '/api/public/fal-webhook'
-    | '/api/public/mux-webhook'
-    | '/api/public/replicate-webhook'
   id:
     | '__root__'
     | '/'
@@ -152,8 +129,6 @@ export interface FileRouteTypes {
     | '/_authenticated/studio/$projectId'
     | '/_authenticated/studio/new'
     | '/api/public/fal-webhook'
-    | '/api/public/mux-webhook'
-    | '/api/public/replicate-webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -162,8 +137,6 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ApiPublicFalWebhookRoute: typeof ApiPublicFalWebhookRoute
-  ApiPublicMuxWebhookRoute: typeof ApiPublicMuxWebhookRoute
-  ApiPublicReplicateWebhookRoute: typeof ApiPublicReplicateWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -209,20 +182,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/brands'
       preLoaderRoute: typeof AuthenticatedBrandsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/api/public/replicate-webhook': {
-      id: '/api/public/replicate-webhook'
-      path: '/api/public/replicate-webhook'
-      fullPath: '/api/public/replicate-webhook'
-      preLoaderRoute: typeof ApiPublicReplicateWebhookRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/mux-webhook': {
-      id: '/api/public/mux-webhook'
-      path: '/api/public/mux-webhook'
-      fullPath: '/api/public/mux-webhook'
-      preLoaderRoute: typeof ApiPublicMuxWebhookRouteImport
-      parentRoute: typeof rootRouteImport
     }
     '/api/public/fal-webhook': {
       id: '/api/public/fal-webhook'
@@ -271,8 +230,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ApiPublicFalWebhookRoute: ApiPublicFalWebhookRoute,
-  ApiPublicMuxWebhookRoute: ApiPublicMuxWebhookRoute,
-  ApiPublicReplicateWebhookRoute: ApiPublicReplicateWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

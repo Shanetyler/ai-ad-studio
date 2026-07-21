@@ -6,7 +6,7 @@ import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { VideoPlayer } from "@/components/video-player";
 import { getProject, generateSceneVisuals } from "@/lib/studio.functions";
-import { startVideoRender } from "@/lib/video.functions";
+import { startVideoRender, getVideoUrl } from "@/lib/video.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Film, Wand2, Clapperboard, Download } from "lucide-react";
 import { toast } from "sonner";
@@ -39,6 +39,7 @@ function ProjectView() {
   const fn = useServerFn(getProject);
   const visualsFn = useServerFn(generateSceneVisuals);
   const renderFn = useServerFn(startVideoRender);
+  const videoUrlFn = useServerFn(getVideoUrl);
   const qc = useQueryClient();
   const [visualsLoading, setVisualsLoading] = useState(false);
   const [renderLoading, setRenderLoading] = useState(false);
@@ -108,10 +109,18 @@ function ProjectView() {
   const totalDuration = scenes.reduce((s, x) => s + (x.duration_s || 3), 0);
   const renderCost = Math.max(10, Math.min(30, totalDuration)) * 2;
   const vs = (project as { video_status?: string }).video_status ?? "idle";
-  const playbackId = (project as { mux_playback_id?: string | null }).mux_playback_id;
+  const videoPath = (project as { supabase_video_path?: string | null }).supabase_video_path;
   const thumbnail = (project as { thumbnail_url?: string | null }).thumbnail_url;
   const renderError = (project as { render_error?: string | null }).render_error;
   const isRendering = ["generating", "uploading", "processing"].includes(vs);
+
+  const { data: signed } = useQuery({
+    queryKey: ["video-url", projectId, videoPath],
+    queryFn: () => videoUrlFn({ data: { projectId } }),
+    enabled: vs === "ready" && !!videoPath,
+    refetchInterval: 55 * 60 * 1000,
+  });
+  const videoSrc = signed?.url ?? null;
 
   return (
     <AppShell>
@@ -146,14 +155,14 @@ function ProjectView() {
       </div>
 
       {/* Final video */}
-      {vs === "ready" && playbackId && (
+      {vs === "ready" && videoSrc && (
         <section className="mb-10">
           <h2 className="mb-4 font-display text-2xl">Final ad</h2>
-          <VideoPlayer playbackId={playbackId} title={project.title} poster={thumbnail ?? undefined} />
+          <VideoPlayer src={videoSrc} poster={thumbnail ?? undefined} />
           <div className="mt-3 flex gap-2">
             <a
-              href={`https://stream.mux.com/${playbackId}/high.mp4`}
-              download
+              href={videoSrc}
+              download={`${project.title}.mp4`}
               className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
             >
               <Download className="h-4 w-4" /> Download MP4
