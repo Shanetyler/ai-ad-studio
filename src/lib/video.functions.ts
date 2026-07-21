@@ -5,6 +5,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 const RENDER_COST_PER_SECOND = 2; // credits
 
 const StartInput = z.object({ projectId: z.string().uuid() });
+const SignedUrlInput = z.object({ projectId: z.string().uuid() });
 
 type Scene = {
   index: number;
@@ -42,9 +43,9 @@ async function refund(ctx: any, userId: string, amount: number, reason: string, 
 }
 
 /**
- * Start a video render for a project. Uses Replicate's Kling v2.1 model.
- * The Replicate webhook (/api/public/replicate-webhook) handles completion:
- * downloading the MP4, uploading it to Supabase Storage, and creating a Mux asset.
+ * Start a video render for a project via fal.ai (Kling v2 master).
+ * The fal webhook (/api/public/fal-webhook) handles completion:
+ * downloading the MP4 and uploading it to Supabase Storage.
  */
 export const startVideoRender = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -88,13 +89,10 @@ export const startVideoRender = createServerFn({ method: "POST" })
       brand = b;
     }
 
-    const duration = Math.min(
-      30,
-      Math.max(5, scenes.reduce((s, x) => s + (x.duration_s || 3), 0)),
-    );
+    const totalDur = scenes.reduce((s, x) => s + (x.duration_s || 3), 0);
+    const duration = Math.min(10, Math.max(5, totalDur));
     const cost = duration * RENDER_COST_PER_SECOND;
 
-    // Create tracking job first
     const { data: job, error: jErr } = await supabase
       .from("jobs")
       .insert({
@@ -103,7 +101,7 @@ export const startVideoRender = createServerFn({ method: "POST" })
         kind: "video",
         status: "queued",
         cost_credits: cost,
-        model_id: "kwaivgi/kling-v2.1",
+        model_id: "fal-ai/kling-video/v2/master",
         input_json: { duration, aspect: project.aspect_ratio, scenes: scenes.length },
       })
       .select("id")
@@ -112,7 +110,6 @@ export const startVideoRender = createServerFn({ method: "POST" })
 
     await consume(context, userId, cost, "video", job.id);
 
-    // Build a cinematic prompt combining scenes + brand
     const scenePrompt = scenes
       .slice(0, 6)
       .map((s, i) => `Scene ${i + 1} (${s.shot}): ${s.visual}`)
@@ -126,57 +123,63 @@ export const startVideoRender = createServerFn({ method: "POST" })
 
     const referenceImage = scenes.find((s) => s.image_url)?.image_url;
 
-    // Kick off Replicate prediction with webhook
-    const replicateKey = process.env.REPLICATE_API_TOKEN;
+    const falKey = process.env.FAL_KEY;
     const appUrl = process.env.PUBLIC_APP_URL;
-    if (!replicateKey) throw new Error("REPLICATE_API_TOKEN missing");
+    if (!falKey) throw new Error("FAL_KEY missing");
     if (!appUrl) throw new Error("PUBLIC_APP_URL missing");
 
-    const webhookUrl = `${appUrl}/api/public/replicate-webhook?project=${data.projectId}&job=${job.id}`;
-
-    const modelDuration = duration <= 5 ? 5 : 10; // kling supports 5 or 10
+    const modelDuration = duration <= 5 ? "5" : "10";
     const aspectMap: Record<string, string> = { "16:9": "16:9", "9:16": "9:16", "1:1": "1:1" };
     const aspect = aspectMap[project.aspect_ratio] ?? "16:9";
 
-    const body: Record<string, unknown> = {
-      input: {
-        prompt: prompt.slice(0, 2400),
-        duration: modelDuration,
-        aspect_ratio: aspect,
-        negative_prompt: "blurry, low quality, watermark, text artifacts, distorted",
-      },
-      webhook: webhookUrl,
-      webhook_events_filter: ["completed"],
-    };
-    if (referenceImage) (body.input as Record<string, unknown>).start_image = referenceImage;
+    const modelPath = referenceImage
+      ? "fal-ai/kling-video/v2/master/image-to-video"
+      : "fal-ai/kling-video/v2/master/text-to-video";
 
-    const res = await fetch("https://api.replicate.com/v1/models/kwaivgi/kling-v2.1/predictions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${replicateKey}`,
-        "Content-Type": "application/json",
-        Prefer: "wait=0",
+    const input: Record<string, unknown> = {
+      prompt: prompt.slice(0, 2400),
+      duration: modelDuration,
+      aspect_ratio: aspect,
+      negative_prompt: "blurry, low quality, watermark, text artifacts, distorted",
+    };
+    if (referenceImage) input.image_url = referenceImage;
+
+    const webhookUrl =
+      `${appUrl}/api/public/fal-webhook?project=${data.projectId}&job=${job.id}`;
+
+    const res = await fetch(
+      `https://queue.fal.run/${modelPath}?fal_webhook=${encodeURIComponent(webhookUrl)}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Key ${falKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(input),
       },
-      body: JSON.stringify(body),
-    });
+    );
 
     if (!res.ok) {
       const errText = await res.text().catch(() => "");
       await refund(context, userId, cost, "video_render_failed", job.id);
       await supabase
         .from("jobs")
-        .update({ status: "failed", error: errText.slice(0, 500), finished_at: new Date().toISOString() })
+        .update({
+          status: "failed",
+          error: errText.slice(0, 500),
+          finished_at: new Date().toISOString(),
+        })
         .eq("id", job.id);
       throw new Error(`Video generation failed to start: ${res.status}`);
     }
 
-    const prediction = (await res.json()) as { id: string };
+    const prediction = (await res.json()) as { request_id: string };
 
     await supabase
       .from("projects")
       .update({
         video_status: "generating",
-        generated_model: "kling-v2.1",
+        generated_model: "kling-v2-master",
         credits_used: cost,
         render_error: null,
       })
@@ -187,9 +190,31 @@ export const startVideoRender = createServerFn({ method: "POST" })
       .update({
         status: "running",
         started_at: new Date().toISOString(),
-        output_json: { replicate_id: prediction.id },
+        output_json: { fal_request_id: prediction.request_id, model_path: modelPath },
       })
       .eq("id", job.id);
 
-    return { ok: true, jobId: job.id, predictionId: prediction.id };
+    return { ok: true, jobId: job.id, requestId: prediction.request_id };
+  });
+
+/** Returns a short-lived signed URL for the rendered video in Supabase Storage. */
+export const getVideoUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => SignedUrlInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: project, error } = await supabase
+      .from("projects")
+      .select("owner_id, supabase_video_path")
+      .eq("id", data.projectId)
+      .single();
+    if (error || !project) throw new Error("Project not found");
+    if (project.owner_id !== userId) throw new Error("Not authorized");
+    if (!project.supabase_video_path) return { url: null };
+
+    const { data: signed, error: sErr } = await supabase.storage
+      .from("ad-videos")
+      .createSignedUrl(project.supabase_video_path, 60 * 60);
+    if (sErr) throw new Error(sErr.message);
+    return { url: signed.signedUrl };
   });
