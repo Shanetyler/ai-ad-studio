@@ -105,9 +105,9 @@ function ProjectView() {
   const { project, script, storyboard } = data;
   const scenes: Scene[] = (storyboard?.scenes_json as unknown as Scene[]) ?? [];
   const hasVisuals = scenes.some((s) => s.image_url);
-  const visualCost = scenes.length * 3;
+  const visualCost = 0;
   const totalDuration = scenes.reduce((s, x) => s + (x.duration_s || 3), 0);
-  const renderCost = Math.max(10, Math.min(30, totalDuration)) * 2;
+  const renderCost = 8;
   const vs = (project as { video_status?: string }).video_status ?? "idle";
   const videoPath = (project as { supabase_video_path?: string | null }).supabase_video_path;
   const thumbnail = (project as { thumbnail_url?: string | null }).thumbnail_url;
