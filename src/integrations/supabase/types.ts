@@ -286,6 +286,8 @@ export type Database = {
           mux_upload_id: string | null
           owner_id: string
           render_error: string | null
+          series_id: string | null
+          series_index: number | null
           status: string
           supabase_video_path: string | null
           thumbnail_url: string | null
@@ -307,6 +309,8 @@ export type Database = {
           mux_upload_id?: string | null
           owner_id: string
           render_error?: string | null
+          series_id?: string | null
+          series_index?: number | null
           status?: string
           supabase_video_path?: string | null
           thumbnail_url?: string | null
@@ -328,6 +332,8 @@ export type Database = {
           mux_upload_id?: string | null
           owner_id?: string
           render_error?: string | null
+          series_id?: string | null
+          series_index?: number | null
           status?: string
           supabase_video_path?: string | null
           thumbnail_url?: string | null
@@ -341,6 +347,13 @@ export type Database = {
             columns: ["brand_id"]
             isOneToOne: false
             referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "series"
             referencedColumns: ["id"]
           },
         ]
@@ -385,6 +398,59 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      series: {
+        Row: {
+          aspect_ratio: string
+          brand_id: string | null
+          brief: string
+          continuity_json: Json
+          created_at: string
+          id: string
+          length: number
+          owner_id: string
+          status: string
+          timeline_type: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          aspect_ratio?: string
+          brand_id?: string | null
+          brief: string
+          continuity_json?: Json
+          created_at?: string
+          id?: string
+          length: number
+          owner_id: string
+          status?: string
+          timeline_type?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          aspect_ratio?: string
+          brand_id?: string | null
+          brief?: string
+          continuity_json?: Json
+          created_at?: string
+          id?: string
+          length?: number
+          owner_id?: string
+          status?: string
+          timeline_type?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "series_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
             referencedColumns: ["id"]
           },
         ]

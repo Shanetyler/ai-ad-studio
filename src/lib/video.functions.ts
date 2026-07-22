@@ -2,7 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const RENDER_COST_PER_SECOND = 2; // credits
+// Flat render cost so the full pipeline (script 2 + visuals 0 + render 8) = 10 credits per ad.
+const RENDER_COST_FLAT = 8;
 
 const StartInput = z.object({ projectId: z.string().uuid() });
 const SignedUrlInput = z.object({ projectId: z.string().uuid() });
@@ -91,7 +92,7 @@ export const startVideoRender = createServerFn({ method: "POST" })
 
     const totalDur = scenes.reduce((s, x) => s + (x.duration_s || 3), 0);
     const duration = Math.min(10, Math.max(5, totalDur));
-    const cost = duration * RENDER_COST_PER_SECOND;
+    const cost = RENDER_COST_FLAT;
 
     const { data: job, error: jErr } = await supabase
       .from("jobs")

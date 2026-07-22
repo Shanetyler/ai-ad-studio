@@ -18,6 +18,8 @@ import { Route as AuthenticatedBrandsRouteImport } from './routes/_authenticated
 import { Route as ApiPublicFalWebhookRouteImport } from './routes/api/public/fal-webhook'
 import { Route as AuthenticatedStudioNewRouteImport } from './routes/_authenticated/studio.new'
 import { Route as AuthenticatedStudioProjectIdRouteImport } from './routes/_authenticated/studio.$projectId'
+import { Route as AuthenticatedSeriesNewRouteImport } from './routes/_authenticated/series.new'
+import { Route as AuthenticatedSeriesSeriesIdRouteImport } from './routes/_authenticated/series.$seriesId'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -64,6 +66,17 @@ const AuthenticatedStudioProjectIdRoute =
     path: '/studio/$projectId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedSeriesNewRoute = AuthenticatedSeriesNewRouteImport.update({
+  id: '/series/new',
+  path: '/series/new',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSeriesSeriesIdRoute =
+  AuthenticatedSeriesSeriesIdRouteImport.update({
+    id: '/series/$seriesId',
+    path: '/series/$seriesId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -71,6 +84,8 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/brands': typeof AuthenticatedBrandsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/series/$seriesId': typeof AuthenticatedSeriesSeriesIdRoute
+  '/series/new': typeof AuthenticatedSeriesNewRoute
   '/studio/$projectId': typeof AuthenticatedStudioProjectIdRoute
   '/studio/new': typeof AuthenticatedStudioNewRoute
   '/api/public/fal-webhook': typeof ApiPublicFalWebhookRoute
@@ -81,6 +96,8 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/brands': typeof AuthenticatedBrandsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/series/$seriesId': typeof AuthenticatedSeriesSeriesIdRoute
+  '/series/new': typeof AuthenticatedSeriesNewRoute
   '/studio/$projectId': typeof AuthenticatedStudioProjectIdRoute
   '/studio/new': typeof AuthenticatedStudioNewRoute
   '/api/public/fal-webhook': typeof ApiPublicFalWebhookRoute
@@ -93,6 +110,8 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/brands': typeof AuthenticatedBrandsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/series/$seriesId': typeof AuthenticatedSeriesSeriesIdRoute
+  '/_authenticated/series/new': typeof AuthenticatedSeriesNewRoute
   '/_authenticated/studio/$projectId': typeof AuthenticatedStudioProjectIdRoute
   '/_authenticated/studio/new': typeof AuthenticatedStudioNewRoute
   '/api/public/fal-webhook': typeof ApiPublicFalWebhookRoute
@@ -105,6 +124,8 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/brands'
     | '/dashboard'
+    | '/series/$seriesId'
+    | '/series/new'
     | '/studio/$projectId'
     | '/studio/new'
     | '/api/public/fal-webhook'
@@ -115,6 +136,8 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/brands'
     | '/dashboard'
+    | '/series/$seriesId'
+    | '/series/new'
     | '/studio/$projectId'
     | '/studio/new'
     | '/api/public/fal-webhook'
@@ -126,6 +149,8 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/_authenticated/brands'
     | '/_authenticated/dashboard'
+    | '/_authenticated/series/$seriesId'
+    | '/_authenticated/series/new'
     | '/_authenticated/studio/$projectId'
     | '/_authenticated/studio/new'
     | '/api/public/fal-webhook'
@@ -204,12 +229,28 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudioProjectIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/series/new': {
+      id: '/_authenticated/series/new'
+      path: '/series/new'
+      fullPath: '/series/new'
+      preLoaderRoute: typeof AuthenticatedSeriesNewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/series/$seriesId': {
+      id: '/_authenticated/series/$seriesId'
+      path: '/series/$seriesId'
+      fullPath: '/series/$seriesId'
+      preLoaderRoute: typeof AuthenticatedSeriesSeriesIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedBrandsRoute: typeof AuthenticatedBrandsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedSeriesSeriesIdRoute: typeof AuthenticatedSeriesSeriesIdRoute
+  AuthenticatedSeriesNewRoute: typeof AuthenticatedSeriesNewRoute
   AuthenticatedStudioProjectIdRoute: typeof AuthenticatedStudioProjectIdRoute
   AuthenticatedStudioNewRoute: typeof AuthenticatedStudioNewRoute
 }
@@ -217,6 +258,8 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedBrandsRoute: AuthenticatedBrandsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedSeriesSeriesIdRoute: AuthenticatedSeriesSeriesIdRoute,
+  AuthenticatedSeriesNewRoute: AuthenticatedSeriesNewRoute,
   AuthenticatedStudioProjectIdRoute: AuthenticatedStudioProjectIdRoute,
   AuthenticatedStudioNewRoute: AuthenticatedStudioNewRoute,
 }
@@ -234,13 +277,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

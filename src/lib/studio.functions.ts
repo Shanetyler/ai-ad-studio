@@ -35,8 +35,9 @@ type ScriptOut = {
   scenes: Scene[];
 };
 
-const SCRIPT_COST = 4;
-const VISUAL_COST_PER_SCENE = 3;
+// Full ad pipeline = 10 credits: script (2) + visuals (0, bundled) + render (8, in video.functions.ts).
+const SCRIPT_COST = 2;
+const VISUAL_COST_PER_SCENE = 0;
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type SupaLike = { supabase: any };
