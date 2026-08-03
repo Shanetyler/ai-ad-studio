@@ -12,31 +12,53 @@ import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Sign in — EASY ADs" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    next: typeof s.next === "string" ? s.next : undefined,
+  }),
   component: AuthPage,
 });
 
+function safeNext(next?: string) {
+  if (!next) return undefined;
+  if (!next.startsWith("/") || next.startsWith("//")) return undefined;
+  return next;
+}
+
 function AuthPage() {
   const navigate = useNavigate();
+  const { next } = Route.useSearch();
+  const nextPath = safeNext(next);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
 
+  function goAfterAuth() {
+    if (nextPath) {
+      window.location.href = nextPath;
+      return;
+    }
+    navigate({ to: "/dashboard", replace: true });
+  }
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard", replace: true });
+      if (data.session) {
+        if (nextPath) window.location.href = nextPath;
+        else navigate({ to: "/dashboard", replace: true });
+      }
     });
-  }, [navigate]);
+  }, [navigate, nextPath]);
 
   async function handleGoogle() {
     setLoading(true);
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+      redirect_uri: nextPath ? `${window.location.origin}${nextPath}` : window.location.origin,
     });
     setLoading(false);
     if (result.error) return toast.error(result.error.message || "Google sign-in failed");
     if (result.redirected) return;
-    navigate({ to: "/dashboard", replace: true });
+    goAfterAuth();
   }
 
   async function handleSignIn(e: React.FormEvent) {
@@ -45,7 +67,7 @@ function AuthPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) return toast.error(error.message);
-    navigate({ to: "/dashboard", replace: true });
+    goAfterAuth();
   }
 
   async function handleSignUp(e: React.FormEvent) {
@@ -54,15 +76,16 @@ function AuthPage() {
     const { error } = await supabase.auth.signUp({
       email, password,
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: nextPath ? `${window.location.origin}${nextPath}` : window.location.origin,
         data: { full_name: name },
       },
     });
     setLoading(false);
     if (error) return toast.error(error.message);
     toast.success("Account created! Redirecting…");
-    navigate({ to: "/dashboard", replace: true });
+    goAfterAuth();
   }
+
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-hero px-4">
