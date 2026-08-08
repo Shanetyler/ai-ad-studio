@@ -5,17 +5,36 @@ import { Film, Sparkles, LayoutDashboard, Palette, LogOut, ListVideo } from "luc
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getCredits } from "@/lib/studio.functions";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const creditsFn = useServerFn(getCredits);
+  const [hasSession, setHasSession] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (mounted) setHasSession(!!data.session);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      setHasSession(!!session);
+    });
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
   const { data } = useQuery({
     queryKey: ["credits"],
     queryFn: () => creditsFn(),
+    enabled: hasSession,
+    retry: false,
   });
+
 
   async function signOut() {
     await queryClient.cancelQueries();
