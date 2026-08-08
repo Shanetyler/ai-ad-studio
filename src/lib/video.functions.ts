@@ -162,17 +162,29 @@ export const startVideoRender = createServerFn({ method: "POST" })
 
     if (!res.ok) {
       const errText = await res.text().catch(() => "");
+      let detail = errText;
+      try {
+        const parsed = JSON.parse(errText) as { detail?: string; message?: string };
+        detail = parsed.detail ?? parsed.message ?? errText;
+      } catch {
+        /* keep raw text */
+      }
       await refund(context, userId, cost, "video_render_failed", job.id);
       await supabase
         .from("jobs")
         .update({
           status: "failed",
-          error: errText.slice(0, 500),
+          error: detail.slice(0, 500),
           finished_at: new Date().toISOString(),
         })
         .eq("id", job.id);
-      throw new Error(`Video generation failed to start: ${res.status}`);
+      const friendly =
+        res.status === 403
+          ? `Video provider rejected the request: ${detail || "access denied"}`
+          : `Video generation failed to start (${res.status}): ${detail}`;
+      throw new Error(friendly);
     }
+
 
     const prediction = (await res.json()) as { request_id: string };
 
