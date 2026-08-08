@@ -98,13 +98,19 @@ export type Database = {
       }
       brands: {
         Row: {
+          address: string | null
+          business_type: string | null
           created_at: string
+          default_cta: string | null
           extracted_json: Json | null
+          font_preference: string | null
           guidelines_md: string | null
           id: string
+          is_default: boolean
           logo_url: string | null
           name: string
           owner_id: string
+          phone: string | null
           primary_color: string | null
           secondary_color: string | null
           tagline: string | null
@@ -113,13 +119,19 @@ export type Database = {
           website_url: string | null
         }
         Insert: {
+          address?: string | null
+          business_type?: string | null
           created_at?: string
+          default_cta?: string | null
           extracted_json?: Json | null
+          font_preference?: string | null
           guidelines_md?: string | null
           id?: string
+          is_default?: boolean
           logo_url?: string | null
           name: string
           owner_id: string
+          phone?: string | null
           primary_color?: string | null
           secondary_color?: string | null
           tagline?: string | null
@@ -128,13 +140,19 @@ export type Database = {
           website_url?: string | null
         }
         Update: {
+          address?: string | null
+          business_type?: string | null
           created_at?: string
+          default_cta?: string | null
           extracted_json?: Json | null
+          font_preference?: string | null
           guidelines_md?: string | null
           id?: string
+          is_default?: boolean
           logo_url?: string | null
           name?: string
           owner_id?: string
+          phone?: string | null
           primary_color?: string | null
           secondary_color?: string | null
           tagline?: string | null
@@ -273,72 +291,93 @@ export type Database = {
       }
       projects: {
         Row: {
+          ad_type: string | null
           aspect_ratio: string
           brand_id: string | null
           brief: string | null
+          business_json: Json | null
           created_at: string
           credits_used: number
           duration_seconds: number | null
+          duration_target: number | null
           generated_model: string | null
           id: string
           mux_asset_id: string | null
           mux_playback_id: string | null
           mux_upload_id: string | null
           owner_id: string
+          plan_json: Json | null
           render_error: string | null
+          render_provider: string | null
           series_id: string | null
           series_index: number | null
           status: string
           supabase_video_path: string | null
           thumbnail_url: string | null
           title: string
+          tone: string | null
           updated_at: string
+          video_mime: string | null
           video_status: string
         }
         Insert: {
+          ad_type?: string | null
           aspect_ratio?: string
           brand_id?: string | null
           brief?: string | null
+          business_json?: Json | null
           created_at?: string
           credits_used?: number
           duration_seconds?: number | null
+          duration_target?: number | null
           generated_model?: string | null
           id?: string
           mux_asset_id?: string | null
           mux_playback_id?: string | null
           mux_upload_id?: string | null
           owner_id: string
+          plan_json?: Json | null
           render_error?: string | null
+          render_provider?: string | null
           series_id?: string | null
           series_index?: number | null
           status?: string
           supabase_video_path?: string | null
           thumbnail_url?: string | null
           title?: string
+          tone?: string | null
           updated_at?: string
+          video_mime?: string | null
           video_status?: string
         }
         Update: {
+          ad_type?: string | null
           aspect_ratio?: string
           brand_id?: string | null
           brief?: string | null
+          business_json?: Json | null
           created_at?: string
           credits_used?: number
           duration_seconds?: number | null
+          duration_target?: number | null
           generated_model?: string | null
           id?: string
           mux_asset_id?: string | null
           mux_playback_id?: string | null
           mux_upload_id?: string | null
           owner_id?: string
+          plan_json?: Json | null
           render_error?: string | null
+          render_provider?: string | null
           series_id?: string | null
           series_index?: number | null
           status?: string
           supabase_video_path?: string | null
           thumbnail_url?: string | null
           title?: string
+          tone?: string | null
           updated_at?: string
+          video_mime?: string | null
           video_status?: string
         }
         Relationships: [
