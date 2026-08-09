@@ -45,8 +45,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const nav = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { to: "/create", label: "New Ad", icon: Sparkles },
+    { to: "/ads", label: "My Ads", icon: Film },
+    { to: "/cast", label: "Cast", icon: UserRound },
     { to: "/brands", label: "Brands", icon: Palette },
-    { to: "/studio/new", label: "New Ad", icon: Sparkles },
     { to: "/series/new", label: "New Series", icon: ListVideo },
   ] as const;
 
