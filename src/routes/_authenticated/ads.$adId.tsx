@@ -32,7 +32,7 @@ import {
   type AspectRatio,
   type TransitionId,
 } from "@/lib/ad-types";
-import { MEDIA_LIBRARY } from "@/lib/media-library";
+import { MEDIA_ASSETS } from "@/lib/media-library";
 import {
   completeAdRender,
   failAdRender,
@@ -166,7 +166,7 @@ function AdEditor() {
           title: `Scene ${p.scenes.length + 1}`,
           description: "",
           caption: "",
-          asset_id: MEDIA_LIBRARY[0]?.id,
+          asset_id: MEDIA_ASSETS[0]?.id,
         },
       ],
     }));
@@ -380,12 +380,12 @@ function AdEditor() {
                   <div className="space-y-1.5">
                     <Label>Animated background</Label>
                     <Select
-                      value={scene.asset_id ?? MEDIA_LIBRARY[0]!.id}
+                      value={scene.asset_id ?? MEDIA_ASSETS[0]!.id}
                       onValueChange={(v) => updateScene(scene.id, { asset_id: v })}
                     >
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {MEDIA_LIBRARY.map((m) => <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>)}
+                        {MEDIA_ASSETS.map((m) => <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
