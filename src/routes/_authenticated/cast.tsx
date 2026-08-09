@@ -26,7 +26,7 @@ export const Route = createFileRoute("/_authenticated/cast")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: CastLibrary;
+  component: CastLibrary,
 });
 
 function CastLibrary() {
