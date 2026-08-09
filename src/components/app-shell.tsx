@@ -1,7 +1,7 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Film, Sparkles, LayoutDashboard, Palette, LogOut, ListVideo } from "lucide-react";
+import { Film, Sparkles, LayoutDashboard, Palette, LogOut, ListVideo, UserRound } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getCredits } from "@/lib/studio.functions";
