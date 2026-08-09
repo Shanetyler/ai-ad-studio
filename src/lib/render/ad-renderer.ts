@@ -218,6 +218,15 @@ export function drawAdFrame(
     }
   }
   ctx.restore();
+
+  // Scene-entry transition overlay
+  if (transition === "fade" && enter < 1) {
+    ctx.save();
+    ctx.globalAlpha = 1 - easeOut(enter);
+    ctx.fillStyle = "#05070c";
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
+  }
 }
 
 export async function loadPlanImages(plan: AdPlan): Promise<ImageMap> {
