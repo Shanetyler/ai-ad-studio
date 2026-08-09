@@ -19,6 +19,7 @@ import { Route as AuthenticatedCreateRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedBrandsRouteImport } from './routes/_authenticated/brands'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
+import { Route as AuthenticatedAdsIndexRouteImport } from './routes/_authenticated/ads.index'
 import { Route as ApiPublicFalWebhookRouteImport } from './routes/api/public/fal-webhook'
 import { Route as AuthenticatedStudioNewRouteImport } from './routes/_authenticated/studio.new'
 import { Route as AuthenticatedStudioProjectIdRouteImport } from './routes/_authenticated/studio.$projectId'
@@ -79,6 +80,11 @@ const Char91DotmcpChar93ListToolsRoute =
     path: '/.mcp/list-tools',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthenticatedAdsIndexRoute = AuthenticatedAdsIndexRouteImport.update({
+  id: '/ads/',
+  path: '/ads/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const ApiPublicFalWebhookRoute = ApiPublicFalWebhookRouteImport.update({
   id: '/api/public/fal-webhook',
   path: '/api/public/fal-webhook',
@@ -141,6 +147,7 @@ export interface FileRoutesByFullPath {
   '/studio/$projectId': typeof AuthenticatedStudioProjectIdRoute
   '/studio/new': typeof AuthenticatedStudioNewRoute
   '/api/public/fal-webhook': typeof ApiPublicFalWebhookRoute
+  '/ads/': typeof AuthenticatedAdsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -160,6 +167,7 @@ export interface FileRoutesByTo {
   '/studio/$projectId': typeof AuthenticatedStudioProjectIdRoute
   '/studio/new': typeof AuthenticatedStudioNewRoute
   '/api/public/fal-webhook': typeof ApiPublicFalWebhookRoute
+  '/ads': typeof AuthenticatedAdsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -181,6 +189,7 @@ export interface FileRoutesById {
   '/_authenticated/studio/$projectId': typeof AuthenticatedStudioProjectIdRoute
   '/_authenticated/studio/new': typeof AuthenticatedStudioNewRoute
   '/api/public/fal-webhook': typeof ApiPublicFalWebhookRoute
+  '/_authenticated/ads/': typeof AuthenticatedAdsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -202,6 +211,7 @@ export interface FileRouteTypes {
     | '/studio/$projectId'
     | '/studio/new'
     | '/api/public/fal-webhook'
+    | '/ads/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -221,6 +231,7 @@ export interface FileRouteTypes {
     | '/studio/$projectId'
     | '/studio/new'
     | '/api/public/fal-webhook'
+    | '/ads'
   id:
     | '__root__'
     | '/'
@@ -241,6 +252,7 @@ export interface FileRouteTypes {
     | '/_authenticated/studio/$projectId'
     | '/_authenticated/studio/new'
     | '/api/public/fal-webhook'
+    | '/_authenticated/ads/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -328,6 +340,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/ads/': {
+      id: '/_authenticated/ads/'
+      path: '/ads'
+      fullPath: '/ads/'
+      preLoaderRoute: typeof AuthenticatedAdsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/fal-webhook': {
       id: '/api/public/fal-webhook'
       path: '/api/public/fal-webhook'
@@ -396,6 +415,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSeriesNewRoute: typeof AuthenticatedSeriesNewRoute
   AuthenticatedStudioProjectIdRoute: typeof AuthenticatedStudioProjectIdRoute
   AuthenticatedStudioNewRoute: typeof AuthenticatedStudioNewRoute
+  AuthenticatedAdsIndexRoute: typeof AuthenticatedAdsIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -407,6 +427,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSeriesNewRoute: AuthenticatedSeriesNewRoute,
   AuthenticatedStudioProjectIdRoute: AuthenticatedStudioProjectIdRoute,
   AuthenticatedStudioNewRoute: AuthenticatedStudioNewRoute,
+  AuthenticatedAdsIndexRoute: AuthenticatedAdsIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
