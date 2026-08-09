@@ -98,7 +98,23 @@ export type AdPlan = {
   contact_line?: string;
   /** Which provider produced the visuals. */
   visuals_source: "demo" | "ai";
+  /** Saved cast library selections (character / voice records). */
+  character_id?: string;
+  voice_id?: string;
+  /** Objective + audience captured in the wizard. */
+  objective?: string;
+  audience?: string;
+  transition?: TransitionId;
 };
+
+export type TransitionId = "cut" | "fade" | "slide" | "zoom";
+
+export const TRANSITIONS: { id: TransitionId; label: string }[] = [
+  { id: "cut", label: "Hard cut" },
+  { id: "fade", label: "Cross fade" },
+  { id: "slide", label: "Slide" },
+  { id: "zoom", label: "Zoom punch" },
+];
 
 export type AdStyle = {
   ad_type: string;
