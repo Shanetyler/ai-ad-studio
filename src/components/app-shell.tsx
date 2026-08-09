@@ -1,7 +1,7 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Film, Sparkles, LayoutDashboard, Palette, LogOut, ListVideo } from "lucide-react";
+import { Film, Sparkles, LayoutDashboard, Palette, LogOut, ListVideo, UserRound } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getCredits } from "@/lib/studio.functions";
@@ -45,8 +45,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const nav = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { to: "/create", label: "New Ad", icon: Sparkles },
+    { to: "/ads", label: "My Ads", icon: Film },
+    { to: "/cast", label: "Cast", icon: UserRound },
     { to: "/brands", label: "Brands", icon: Palette },
-    { to: "/studio/new", label: "New Ad", icon: Sparkles },
     { to: "/series/new", label: "New Series", icon: ListVideo },
   ] as const;
 

@@ -92,17 +92,21 @@ export function drawAdFrame(
   ctx.fillRect(0, 0, w, h);
 
   // Scene media: uploaded/AI image with a slow ken-burns, else motion graphics
+  const transition = plan.transition ?? "fade";
+  const enter = Math.min(1, local / 0.45);
   const img = scene.image_url ? images?.[scene.image_url] : undefined;
   if (img) {
-    const zoom = 1.06 + 0.08 * progress;
+    const punch = transition === "zoom" ? (1 - easeOut(enter)) * 0.14 : 0;
+    const zoom = 1.06 + 0.08 * progress + punch;
     const iw = img.naturalWidth || img.width;
     const ih = img.naturalHeight || img.height;
     const scale = Math.max(w / iw, h / ih) * zoom;
     const dw = iw * scale;
     const dh = ih * scale;
+    const slide = transition === "slide" ? (1 - easeOut(enter)) * w * 0.18 : 0;
     ctx.save();
     ctx.globalAlpha = 0.95;
-    ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2 - progress * s * 0.02, dw, dh);
+    ctx.drawImage(img, (w - dw) / 2 + slide, (h - dh) / 2 - progress * s * 0.02, dw, dh);
     ctx.restore();
   } else if (asset) {
     drawMotif(ctx, asset.motif, { w, h, t: time, color: base[1]!, accent: plan.palette.primary });
@@ -214,6 +218,15 @@ export function drawAdFrame(
     }
   }
   ctx.restore();
+
+  // Scene-entry transition overlay
+  if (transition === "fade" && enter < 1) {
+    ctx.save();
+    ctx.globalAlpha = 1 - easeOut(enter);
+    ctx.fillStyle = "#05070c";
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
+  }
 }
 
 export async function loadPlanImages(plan: AdPlan): Promise<ImageMap> {

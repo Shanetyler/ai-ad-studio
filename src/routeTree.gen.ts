@@ -15,14 +15,18 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedCreateRouteImport } from './routes/_authenticated/create'
+import { Route as AuthenticatedCastRouteImport } from './routes/_authenticated/cast'
 import { Route as AuthenticatedBrandsRouteImport } from './routes/_authenticated/brands'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
+import { Route as AuthenticatedAdsIndexRouteImport } from './routes/_authenticated/ads.index'
 import { Route as ApiPublicFalWebhookRouteImport } from './routes/api/public/fal-webhook'
 import { Route as AuthenticatedStudioNewRouteImport } from './routes/_authenticated/studio.new'
 import { Route as AuthenticatedStudioProjectIdRouteImport } from './routes/_authenticated/studio.$projectId'
 import { Route as AuthenticatedSeriesNewRouteImport } from './routes/_authenticated/series.new'
 import { Route as AuthenticatedSeriesSeriesIdRouteImport } from './routes/_authenticated/series.$seriesId'
+import { Route as AuthenticatedAdsAdIdRouteImport } from './routes/_authenticated/ads.$adId'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 
@@ -55,6 +59,16 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCreateRoute = AuthenticatedCreateRouteImport.update({
+  id: '/create',
+  path: '/create',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCastRoute = AuthenticatedCastRouteImport.update({
+  id: '/cast',
+  path: '/cast',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedBrandsRoute = AuthenticatedBrandsRouteImport.update({
   id: '/brands',
   path: '/brands',
@@ -72,6 +86,11 @@ const Char91DotmcpChar93ListToolsRoute =
     path: '/.mcp/list-tools',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthenticatedAdsIndexRoute = AuthenticatedAdsIndexRouteImport.update({
+  id: '/ads/',
+  path: '/ads/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const ApiPublicFalWebhookRoute = ApiPublicFalWebhookRouteImport.update({
   id: '/api/public/fal-webhook',
   path: '/api/public/fal-webhook',
@@ -99,6 +118,11 @@ const AuthenticatedSeriesSeriesIdRoute =
     path: '/series/$seriesId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdsAdIdRoute = AuthenticatedAdsAdIdRouteImport.update({
+  id: '/ads/$adId',
+  path: '/ads/$adId',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const Char91DotmcpChar93InvokeToolToolRoute =
   Char91DotmcpChar93InvokeToolToolRouteImport.update({
     id: '/.mcp/invoke-tool/$tool',
@@ -119,14 +143,18 @@ export interface FileRoutesByFullPath {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/brands': typeof AuthenticatedBrandsRoute
+  '/cast': typeof AuthenticatedCastRoute
+  '/create': typeof AuthenticatedCreateRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/ads/$adId': typeof AuthenticatedAdsAdIdRoute
   '/series/$seriesId': typeof AuthenticatedSeriesSeriesIdRoute
   '/series/new': typeof AuthenticatedSeriesNewRoute
   '/studio/$projectId': typeof AuthenticatedStudioProjectIdRoute
   '/studio/new': typeof AuthenticatedStudioNewRoute
   '/api/public/fal-webhook': typeof ApiPublicFalWebhookRoute
+  '/ads/': typeof AuthenticatedAdsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -136,14 +164,18 @@ export interface FileRoutesByTo {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/brands': typeof AuthenticatedBrandsRoute
+  '/cast': typeof AuthenticatedCastRoute
+  '/create': typeof AuthenticatedCreateRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/ads/$adId': typeof AuthenticatedAdsAdIdRoute
   '/series/$seriesId': typeof AuthenticatedSeriesSeriesIdRoute
   '/series/new': typeof AuthenticatedSeriesNewRoute
   '/studio/$projectId': typeof AuthenticatedStudioProjectIdRoute
   '/studio/new': typeof AuthenticatedStudioNewRoute
   '/api/public/fal-webhook': typeof ApiPublicFalWebhookRoute
+  '/ads': typeof AuthenticatedAdsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -155,14 +187,18 @@ export interface FileRoutesById {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/brands': typeof AuthenticatedBrandsRoute
+  '/_authenticated/cast': typeof AuthenticatedCastRoute
+  '/_authenticated/create': typeof AuthenticatedCreateRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/_authenticated/ads/$adId': typeof AuthenticatedAdsAdIdRoute
   '/_authenticated/series/$seriesId': typeof AuthenticatedSeriesSeriesIdRoute
   '/_authenticated/series/new': typeof AuthenticatedSeriesNewRoute
   '/_authenticated/studio/$projectId': typeof AuthenticatedStudioProjectIdRoute
   '/_authenticated/studio/new': typeof AuthenticatedStudioNewRoute
   '/api/public/fal-webhook': typeof ApiPublicFalWebhookRoute
+  '/_authenticated/ads/': typeof AuthenticatedAdsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -174,14 +210,18 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/brands'
+    | '/cast'
+    | '/create'
     | '/dashboard'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/ads/$adId'
     | '/series/$seriesId'
     | '/series/new'
     | '/studio/$projectId'
     | '/studio/new'
     | '/api/public/fal-webhook'
+    | '/ads/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -191,14 +231,18 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/brands'
+    | '/cast'
+    | '/create'
     | '/dashboard'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/ads/$adId'
     | '/series/$seriesId'
     | '/series/new'
     | '/studio/$projectId'
     | '/studio/new'
     | '/api/public/fal-webhook'
+    | '/ads'
   id:
     | '__root__'
     | '/'
@@ -209,14 +253,18 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/brands'
+    | '/_authenticated/cast'
+    | '/_authenticated/create'
     | '/_authenticated/dashboard'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/_authenticated/ads/$adId'
     | '/_authenticated/series/$seriesId'
     | '/_authenticated/series/new'
     | '/_authenticated/studio/$projectId'
     | '/_authenticated/studio/new'
     | '/api/public/fal-webhook'
+    | '/_authenticated/ads/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -276,6 +324,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/create': {
+      id: '/_authenticated/create'
+      path: '/create'
+      fullPath: '/create'
+      preLoaderRoute: typeof AuthenticatedCreateRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/cast': {
+      id: '/_authenticated/cast'
+      path: '/cast'
+      fullPath: '/cast'
+      preLoaderRoute: typeof AuthenticatedCastRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/brands': {
       id: '/_authenticated/brands'
       path: '/brands'
@@ -296,6 +358,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/.mcp/list-tools'
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/ads/': {
+      id: '/_authenticated/ads/'
+      path: '/ads'
+      fullPath: '/ads/'
+      preLoaderRoute: typeof AuthenticatedAdsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/api/public/fal-webhook': {
       id: '/api/public/fal-webhook'
@@ -332,6 +401,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSeriesSeriesIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/ads/$adId': {
+      id: '/_authenticated/ads/$adId'
+      path: '/ads/$adId'
+      fullPath: '/ads/$adId'
+      preLoaderRoute: typeof AuthenticatedAdsAdIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/.mcp/invoke-tool/$tool': {
       id: '/.mcp/invoke-tool/$tool'
       path: '/.mcp/invoke-tool/$tool'
@@ -351,20 +427,28 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedBrandsRoute: typeof AuthenticatedBrandsRoute
+  AuthenticatedCastRoute: typeof AuthenticatedCastRoute
+  AuthenticatedCreateRoute: typeof AuthenticatedCreateRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedAdsAdIdRoute: typeof AuthenticatedAdsAdIdRoute
   AuthenticatedSeriesSeriesIdRoute: typeof AuthenticatedSeriesSeriesIdRoute
   AuthenticatedSeriesNewRoute: typeof AuthenticatedSeriesNewRoute
   AuthenticatedStudioProjectIdRoute: typeof AuthenticatedStudioProjectIdRoute
   AuthenticatedStudioNewRoute: typeof AuthenticatedStudioNewRoute
+  AuthenticatedAdsIndexRoute: typeof AuthenticatedAdsIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedBrandsRoute: AuthenticatedBrandsRoute,
+  AuthenticatedCastRoute: AuthenticatedCastRoute,
+  AuthenticatedCreateRoute: AuthenticatedCreateRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedAdsAdIdRoute: AuthenticatedAdsAdIdRoute,
   AuthenticatedSeriesSeriesIdRoute: AuthenticatedSeriesSeriesIdRoute,
   AuthenticatedSeriesNewRoute: AuthenticatedSeriesNewRoute,
   AuthenticatedStudioProjectIdRoute: AuthenticatedStudioProjectIdRoute,
   AuthenticatedStudioNewRoute: AuthenticatedStudioNewRoute,
+  AuthenticatedAdsIndexRoute: AuthenticatedAdsIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
