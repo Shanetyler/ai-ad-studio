@@ -162,6 +162,48 @@ export type Database = {
         }
         Relationships: []
       }
+      cast_members: {
+        Row: {
+          attributes: Json
+          created_at: string
+          description: string
+          id: string
+          kind: string
+          name: string
+          owner_id: string
+          provider_ref: string | null
+          reference_url: string | null
+          rights_confirmed: boolean
+          updated_at: string
+        }
+        Insert: {
+          attributes?: Json
+          created_at?: string
+          description?: string
+          id?: string
+          kind: string
+          name: string
+          owner_id: string
+          provider_ref?: string | null
+          reference_url?: string | null
+          rights_confirmed?: boolean
+          updated_at?: string
+        }
+        Update: {
+          attributes?: Json
+          created_at?: string
+          description?: string
+          id?: string
+          kind?: string
+          name?: string
+          owner_id?: string
+          provider_ref?: string | null
+          reference_url?: string | null
+          rights_confirmed?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       credit_ledger: {
         Row: {
           created_at: string
