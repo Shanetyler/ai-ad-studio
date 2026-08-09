@@ -38,6 +38,11 @@ const PlanSchema = z.object({
   logo_url: z.string().max(600).optional(),
   contact_line: z.string().max(240).optional(),
   visuals_source: z.enum(["demo", "ai"]),
+  character_id: z.string().max(60).optional(),
+  voice_id: z.string().max(60).optional(),
+  objective: z.string().max(120).optional(),
+  audience: z.string().max(400).optional(),
+  transition: z.enum(["cut", "fade", "slide", "zoom"]).optional(),
   scenes: z
     .array(
       z.object({
