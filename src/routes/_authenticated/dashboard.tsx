@@ -21,7 +21,7 @@ function Dashboard() {
           <h1 className="font-display text-4xl">Your studio</h1>
           <p className="mt-1 text-muted-foreground">Pick up where you left off, or start a new spot.</p>
         </div>
-        <Link to="/studio/new">
+        <Link to="/create">
           <Button variant="hero"><Plus /> New ad</Button>
         </Link>
       </div>
@@ -37,7 +37,7 @@ function Dashboard() {
             and directs the shoot for you.
           </p>
           <div className="mt-6 flex gap-2">
-            <Link to="/studio/new"><Button variant="hero">Create an ad</Button></Link>
+            <Link to="/create"><Button variant="hero">Create an ad</Button></Link>
             <Link to="/brands"><Button variant="cinematic">Add a brand</Button></Link>
           </div>
         </div>
@@ -49,8 +49,8 @@ function Dashboard() {
             return (
               <Link
                 key={p.id}
-                to="/studio/$projectId"
-                params={{ projectId: p.id }}
+                to="/ads/$adId"
+                params={{ adId: p.id }}
                 className="panel group relative overflow-hidden transition-all hover:border-primary/40"
               >
                 <div className="relative aspect-video overflow-hidden bg-black/40">
