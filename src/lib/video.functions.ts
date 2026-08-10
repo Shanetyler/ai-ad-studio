@@ -60,6 +60,15 @@ export const startVideoRender = createServerFn({ method: "POST" })
       .eq("id", data.projectId)
       .single();
     if (pErr || !project) throw new Error("Project not found");
+
+    // Paid cloud video synthesis is OFF unless explicitly opted in.
+    // Default MVP path is the free in-browser renderer (Export video in the ad editor).
+    if (process.env.VIDEO_PROVIDER !== "fal" || !process.env.FAL_KEY) {
+      throw new Error(
+        "Cloud video generation is disabled. Use “Export video” in the ad editor — it renders in your browser for free and costs no external credits.",
+      );
+    }
+
     if (project.owner_id !== userId) throw new Error("Not authorized");
     if (["generating", "uploading", "processing"].includes(project.video_status)) {
       throw new Error("A render is already in progress");

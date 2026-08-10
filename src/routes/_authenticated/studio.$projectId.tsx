@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -148,14 +148,21 @@ function ProjectView() {
             {visualsLoading ? <Loader2 className="animate-spin" /> : <Wand2 />}
             {hasVisuals ? "Regenerate visuals" : `Visuals (~${visualCost} cr)`}
           </Button>
+          <Button variant="hero" asChild disabled={!scenes.length}>
+            <Link to="/ads/$adId" params={{ adId: projectId }}>
+              <Clapperboard /> Export video in browser (free)
+            </Link>
+          </Button>
           <Button
-            variant="hero"
+            variant="ghost"
             onClick={onGenerateVideo}
             disabled={renderLoading || isRendering || !scenes.length}
+            title="Requires a paid cloud video provider (disabled by default)"
           >
-            {renderLoading || isRendering ? <Loader2 className="animate-spin" /> : <Clapperboard />}
-            {vs === "ready" ? "Regenerate video" : `Generate final video (~${renderCost} cr)`}
+            {renderLoading || isRendering ? <Loader2 className="animate-spin" /> : <Film />}
+            {vs === "ready" ? "Regenerate cloud video" : `Cloud render (~${renderCost} cr)`}
           </Button>
+
         </div>
       </div>
 
