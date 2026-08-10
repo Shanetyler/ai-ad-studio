@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { cloneElement, isValidElement, useId, useState, type ReactElement } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/app-shell";
@@ -382,11 +382,17 @@ function CreateAd() {
 }
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  const id = useId();
+  const control =
+    isValidElement(children) && !(children as ReactElement<{ id?: string }>).props.id
+      ? cloneElement(children as ReactElement<{ id?: string }>, { id })
+      : children;
   return (
     <div className="space-y-2">
-      <Label>{label}</Label>
-      {children}
+      <Label htmlFor={id}>{label}</Label>
+      {control}
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
 }
+
