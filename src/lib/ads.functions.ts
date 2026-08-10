@@ -6,18 +6,25 @@ import type { AdPlan, AdStyle, BusinessInfo } from "@/lib/ad-types";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+/** Trims and truncates instead of rejecting long free-text input. */
+const clip = (max: number) =>
+  z
+    .string()
+    .default("")
+    .transform((s) => s.trim().slice(0, max));
+
 const BusinessSchema = z.object({
-  business_name: z.string().min(1).max(120),
-  business_type: z.string().max(80).default(""),
-  description: z.string().max(1200).default(""),
-  products: z.string().max(1200).default(""),
-  target_customer: z.string().max(400).default(""),
-  location: z.string().max(160).default(""),
-  phone: z.string().max(40).default(""),
-  website: z.string().max(200).default(""),
-  cta: z.string().max(120).default(""),
-  offer: z.string().max(200).default(""),
-  notes: z.string().max(800).default(""),
+  business_name: z.string().trim().min(1).max(120),
+  business_type: clip(80),
+  description: clip(2000),
+  products: clip(2000),
+  target_customer: clip(1000),
+  location: clip(200),
+  phone: clip(40),
+  website: clip(300),
+  cta: clip(300),
+  offer: clip(400),
+  notes: clip(1000),
 });
 
 const StyleSchema = z.object({
