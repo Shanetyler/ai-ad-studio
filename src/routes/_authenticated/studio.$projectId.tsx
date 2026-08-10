@@ -92,6 +92,19 @@ function ProjectView() {
     }
   }
 
+  const projectMeta = data?.project as
+    | { video_status?: string; supabase_video_path?: string | null; thumbnail_url?: string | null; render_error?: string | null }
+    | undefined;
+  const videoPath = projectMeta?.supabase_video_path;
+  const vs = projectMeta?.video_status ?? data?.project.status ?? "idle";
+
+  const { data: signed } = useQuery({
+    queryKey: ["video-url", projectId, videoPath],
+    queryFn: () => videoUrlFn({ data: { projectId } }),
+    enabled: vs === "ready" && !!videoPath,
+    refetchInterval: 55 * 60 * 1000,
+  });
+
   if (isLoading || !data) {
     return (
       <AppShell>
@@ -108,19 +121,11 @@ function ProjectView() {
   const visualCost = 0;
   const totalDuration = scenes.reduce((s, x) => s + (x.duration_s || 3), 0);
   const renderCost = 8;
-  const vs = (project as { video_status?: string }).video_status ?? "idle";
-  const videoPath = (project as { supabase_video_path?: string | null }).supabase_video_path;
-  const thumbnail = (project as { thumbnail_url?: string | null }).thumbnail_url;
-  const renderError = (project as { render_error?: string | null }).render_error;
+  const thumbnail = projectMeta?.thumbnail_url;
+  const renderError = projectMeta?.render_error;
   const isRendering = ["generating", "uploading", "processing"].includes(vs);
-
-  const { data: signed } = useQuery({
-    queryKey: ["video-url", projectId, videoPath],
-    queryFn: () => videoUrlFn({ data: { projectId } }),
-    enabled: vs === "ready" && !!videoPath,
-    refetchInterval: 55 * 60 * 1000,
-  });
   const videoSrc = signed?.url ?? null;
+
 
   return (
     <AppShell>
