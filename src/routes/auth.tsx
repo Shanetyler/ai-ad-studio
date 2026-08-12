@@ -89,9 +89,12 @@ function AuthPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-hero px-4">
-      <Link to="/" className="absolute left-6 top-6 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-        <Film className="h-4 w-4" /> EASY ADs
-      </Link>
+      <div className="absolute left-4 top-6 flex items-center gap-2">
+        <BackButton />
+        <Link to="/" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+          <Film className="h-4 w-4" /> EASY ADs
+        </Link>
+      </div>
       <div className="panel w-full max-w-md p-8">
         <h1 className="font-display text-3xl">Welcome</h1>
         <p className="mt-1 text-sm text-muted-foreground">Sign in or create your studio account.</p>
