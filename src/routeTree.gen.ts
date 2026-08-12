@@ -14,6 +14,7 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedLibraryRouteImport } from './routes/_authenticated/library'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCreateRouteImport } from './routes/_authenticated/create'
 import { Route as AuthenticatedCastRouteImport } from './routes/_authenticated/cast'
@@ -53,6 +54,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedLibraryRoute = AuthenticatedLibraryRouteImport.update({
+  id: '/library',
+  path: '/library',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
@@ -146,6 +152,7 @@ export interface FileRoutesByFullPath {
   '/cast': typeof AuthenticatedCastRoute
   '/create': typeof AuthenticatedCreateRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/library': typeof AuthenticatedLibraryRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/ads/$adId': typeof AuthenticatedAdsAdIdRoute
@@ -167,6 +174,7 @@ export interface FileRoutesByTo {
   '/cast': typeof AuthenticatedCastRoute
   '/create': typeof AuthenticatedCreateRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/library': typeof AuthenticatedLibraryRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/ads/$adId': typeof AuthenticatedAdsAdIdRoute
@@ -190,6 +198,7 @@ export interface FileRoutesById {
   '/_authenticated/cast': typeof AuthenticatedCastRoute
   '/_authenticated/create': typeof AuthenticatedCreateRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/library': typeof AuthenticatedLibraryRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/ads/$adId': typeof AuthenticatedAdsAdIdRoute
@@ -213,6 +222,7 @@ export interface FileRouteTypes {
     | '/cast'
     | '/create'
     | '/dashboard'
+    | '/library'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/ads/$adId'
@@ -234,6 +244,7 @@ export interface FileRouteTypes {
     | '/cast'
     | '/create'
     | '/dashboard'
+    | '/library'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/ads/$adId'
@@ -256,6 +267,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cast'
     | '/_authenticated/create'
     | '/_authenticated/dashboard'
+    | '/_authenticated/library'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/ads/$adId'
@@ -316,6 +328,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/library': {
+      id: '/_authenticated/library'
+      path: '/library'
+      fullPath: '/library'
+      preLoaderRoute: typeof AuthenticatedLibraryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
@@ -430,6 +449,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCastRoute: typeof AuthenticatedCastRoute
   AuthenticatedCreateRoute: typeof AuthenticatedCreateRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedLibraryRoute: typeof AuthenticatedLibraryRoute
   AuthenticatedAdsAdIdRoute: typeof AuthenticatedAdsAdIdRoute
   AuthenticatedSeriesSeriesIdRoute: typeof AuthenticatedSeriesSeriesIdRoute
   AuthenticatedSeriesNewRoute: typeof AuthenticatedSeriesNewRoute
@@ -443,6 +463,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCastRoute: AuthenticatedCastRoute,
   AuthenticatedCreateRoute: AuthenticatedCreateRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedLibraryRoute: AuthenticatedLibraryRoute,
   AuthenticatedAdsAdIdRoute: AuthenticatedAdsAdIdRoute,
   AuthenticatedSeriesSeriesIdRoute: AuthenticatedSeriesSeriesIdRoute,
   AuthenticatedSeriesNewRoute: AuthenticatedSeriesNewRoute,
