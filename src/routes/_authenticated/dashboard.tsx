@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { listProjects } from "@/lib/studio.functions";
-import { Plus, Sparkles } from "lucide-react";
+import { ListVideo, Palette, Plus, Sparkles, UserRound } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
