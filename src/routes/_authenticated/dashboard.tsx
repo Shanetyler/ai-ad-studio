@@ -7,6 +7,16 @@ import { listProjects } from "@/lib/studio.functions";
 import { ListVideo, Palette, Plus, Sparkles, UserRound } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
+  head: () => ({
+    meta: [
+      { title: "Studio dashboard — EASY ADs" },
+      { name: "description", content: "Start a new ad, launch an ad series, or jump back into a project you already began." },
+      { property: "og:title", content: "Studio dashboard — EASY ADs" },
+      { property: "og:description", content: "Your EASY ADs studio: start options and recent ad projects." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: Dashboard,
 });
 
