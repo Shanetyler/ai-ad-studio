@@ -30,6 +30,7 @@ const TIERS = [
     credits: 100,
     price: "$19",
     blurb: "10 finished ads",
+    popular: false,
     perks: ["10 complete ad videos", "In-browser export", "All aspect ratios"],
   },
   {
@@ -47,6 +48,7 @@ const TIERS = [
     credits: 1000,
     price: "$139",
     blurb: "100 finished ads",
+    popular: false,
     perks: ["100 complete ad videos", "Priority generation", "Best price per credit"],
   },
 ] as const;
