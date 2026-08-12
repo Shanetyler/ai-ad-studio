@@ -14,6 +14,13 @@ function Dashboard() {
   const fn = useServerFn(listProjects);
   const { data: projects = [] } = useQuery({ queryKey: ["projects"], queryFn: () => fn() });
 
+  const startOptions = [
+    { to: "/create", title: "Single ad", desc: "Answer a few questions and get a script, storyboard and video.", icon: Sparkles },
+    { to: "/series/new", title: "Ad series", desc: "3, 7 or 10 connected episodes with continuity.", icon: ListVideo },
+    { to: "/brands", title: "From a brand kit", desc: "Start from a saved brand, logo and colours.", icon: Palette },
+    { to: "/cast", title: "With a cast member", desc: "Reuse a consistent character across your ads.", icon: UserRound },
+  ] as const;
+
   return (
     <AppShell>
       <div className="mb-8 flex items-end justify-between">
@@ -25,6 +32,25 @@ function Dashboard() {
           <Button variant="hero"><Plus /> New ad</Button>
         </Link>
       </div>
+
+      <section className="mb-10">
+        <h2 className="mb-3 font-display text-2xl">Start an ad</h2>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {startOptions.map((o) => (
+            <Link
+              key={o.to}
+              to={o.to}
+              className="panel flex flex-col gap-2 p-5 transition-colors hover:border-primary/40"
+            >
+              <div className="grid h-9 w-9 place-items-center rounded-lg bg-secondary">
+                <o.icon className="h-4 w-4 text-primary" />
+              </div>
+              <div className="font-display text-lg">{o.title}</div>
+              <p className="text-sm text-muted-foreground">{o.desc}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
 
       {projects.length === 0 ? (
         <div className="panel grain flex flex-col items-center justify-center px-6 py-24 text-center">
