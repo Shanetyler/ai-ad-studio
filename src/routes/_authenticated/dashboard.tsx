@@ -89,7 +89,7 @@ function Dashboard() {
                 params={{ adId: p.id }}
                 className="panel group relative overflow-hidden transition-all hover:border-primary/40"
               >
-                <div className="relative aspect-video overflow-hidden bg-black/40">
+                <div className="relative aspect-video overflow-hidden bg-secondary">
                   {thumb ? (
                     <img src={thumb} alt={p.title} className="h-full w-full object-cover" />
                   ) : (
