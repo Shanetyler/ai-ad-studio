@@ -84,7 +84,7 @@
 .dark { color-scheme: light; }
 
 @layer base {
-  html { color-scheme: dark; }
+  html { color-scheme: light; }
   * { border-color: var(--color-border); }
   body {
     background-color: var(--color-background);
@@ -94,7 +94,7 @@
     -webkit-font-smoothing: antialiased;
   }
   h1,h2,h3 { font-family: var(--font-display); letter-spacing: -0.02em; }
-  ::selection { background: oklch(0.78 0.17 55 / 40%); }
+  ::selection { background: oklch(0.55 0.19 258 / 25%); }
 }
 
 @utility text-gradient-ember {
@@ -110,7 +110,7 @@
 
 @utility panel {
   background: var(--gradient-panel);
-  border: 1px solid oklch(1 0 0 / 6%);
+  border: 1px solid oklch(0.55 0.12 258 / 12%);
   border-radius: var(--radius-lg);
   backdrop-filter: blur(8px);
 }
