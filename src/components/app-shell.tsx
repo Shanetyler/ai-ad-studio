@@ -1,7 +1,8 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Film, Sparkles, LayoutDashboard, Palette, LogOut, ListVideo, UserRound } from "lucide-react";
+import { Film, LogOut } from "lucide-react";
+import { BackButton, ScreenMenu, SCREENS } from "@/components/screen-menu";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getCredits } from "@/lib/studio.functions";
@@ -43,14 +44,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     navigate({ to: "/auth", replace: true });
   }
 
-  const nav = [
-    { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { to: "/create", label: "New Ad", icon: Sparkles },
-    { to: "/ads", label: "My Ads", icon: Film },
-    { to: "/cast", label: "Cast", icon: UserRound },
-    { to: "/brands", label: "Brands", icon: Palette },
-    { to: "/series/new", label: "New Series", icon: ListVideo },
-  ] as const;
+  const nav = SCREENS;
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -79,16 +73,23 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 items-center justify-between border-b border-border/50 px-6">
-          <div className="text-sm text-muted-foreground">
-            {path.split("/").filter(Boolean).join(" / ") || "dashboard"}
+        <header className="flex h-14 items-center justify-between gap-3 border-b border-border/50 px-4 md:px-6">
+          <div className="flex min-w-0 items-center gap-2">
+            <BackButton />
+            <ScreenMenu />
+            <div className="hidden truncate text-sm text-muted-foreground lg:block">
+              {path.split("/").filter(Boolean).join(" / ") || "dashboard"}
+            </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="rounded-full border border-border bg-card px-3 py-1 text-xs">
+            <Link
+              to="/credits"
+              className="rounded-full border border-border bg-card px-3 py-1 text-xs hover:border-primary/50"
+            >
               <span className="text-primary">{data?.credits ?? 0}</span>
               <span className="ml-1 text-muted-foreground">credits</span>
-            </div>
-            <Button variant="ghost" size="sm" onClick={signOut}>
+            </Link>
+            <Button variant="ghost" size="sm" onClick={signOut} aria-label="Sign out">
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
