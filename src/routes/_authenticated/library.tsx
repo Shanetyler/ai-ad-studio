@@ -61,7 +61,7 @@ function VideoLibrary() {
               params={{ adId: ad.id }}
               className="panel group overflow-hidden transition-colors hover:border-primary/40"
             >
-              <div className="grid aspect-video place-items-center bg-black/40">
+              <div className="grid aspect-video place-items-center bg-secondary">
                 <Play className="h-7 w-7 text-primary" />
               </div>
               <div className="p-4">
