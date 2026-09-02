@@ -74,6 +74,8 @@ export const BUSINESS_TYPES = [
   "Other",
 ] as const;
 
+export type ShotType = "business_media" | "graphics" | "ai_image" | "ai_video";
+
 export type AdScene = {
   id: string;
   duration_s: number;
@@ -83,6 +85,10 @@ export type AdScene = {
   /** Media asset id from the demo library, or "upload" when image_url is set. */
   asset_id?: string;
   image_url?: string;
+  /** How the creative director decided to shoot this beat. */
+  shot_type?: ShotType;
+  /** Signed URL of a generated/uploaded clip for this beat, when one exists. */
+  video_url?: string;
 };
 
 export type AdPlan = {
