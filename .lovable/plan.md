@@ -1,159 +1,76 @@
+# Easy Ad — Deep Business Intelligence + Character Studio
 
-# EASY ADs — AI Video Ad SaaS
+Two upgrades on top of what already works. Nothing existing gets rebuilt: the URL research, brand kits, ad wizard, browser renderer, auth and saved projects all keep working exactly as they do today.
 
-Full QuickFrame-style clone, shipped in phases on **TanStack Start + Lovable Cloud + Stripe + Lovable AI Gateway**.
+## Upgrade 1 — Deep website business intelligence
 
----
+Today `researchBrand` fetches one page, strips tags, asks the AI for a small brand profile, and inserts a `brands` row. That stays as the "Quick scan" path. On top of it we add a "Deep scan":
 
-## High-Level Architecture
+1. Fetch the URL, follow same-origin links (plus `/sitemap.xml` when present) and pick up to ~10 relevant pages by URL/anchor scoring: home, about, services/products, pricing, contact, testimonials/reviews, FAQ, locations.
+2. Extract per page: cleaned text, title/meta, JSON-LD (`LocalBusiness`, `Product`, `FAQPage`, `Review`), phones/emails/addresses, social links, logo and hero/product image candidates.
+3. One consolidating AI pass turns the corpus into a structured business profile: offerings, offers/pricing, locations/service area, USPs, testimonials, FAQs, brand voice/language, audience, plus a creative brief (angles, hooks, objections, proof points).
+4. Every field carries provenance — `source_url` + `confidence` when scraped, or flagged `ai_suggested` when inferred. A review screen shows the two visually distinct and lets the owner edit/confirm before production. Only a confirmed profile is treated as facts.
+5. Discovered brand assets (logo, hero images) are listed with their remote URLs; the owner can import chosen ones into `project-assets` storage for use in ads.
+
+Scan work runs as a `jobs` row so progress is visible and failures refund credits like the existing plan/render flow.
+
+## Upgrade 2 — Real reusable character studio
+
+`cast_members` today is name/description/attributes/reference_url/rights_confirmed. It gets extended (not replaced) into a production asset:
+
+- Multiple reference images per character stored in `project-assets` (private, owner-scoped), with one primary frame used for image-to-video consistency.
+- Structured appearance metadata (age range, wardrobe, setting, distinguishing features) plus a generated, reusable "appearance prompt block" that is injected verbatim into every generation so the same character looks consistent across ads.
+- Voice config: style/pace/accent description, optional provider + provider voice id, and a persisted generation seed.
+- Rights/consent record: who confirmed, when, and scope. Provider cloning features stay hidden unless the configured provider actually supports them and consent is on file. The UI keeps saying likeness/voice cloning is not available otherwise.
+- Characters are owner-scoped and business-agnostic, so one character is reusable across brands and ads.
+- Selecting a character in the wizard now actually feeds the pipeline: appearance block + primary reference image go into the spokesperson shots, voice config into voiceover, and the character id is recorded on the project.
+
+## Creative director / production pipeline
+
+A director step sits between the brief and the shot list. For each beat it chooses the cheapest sufficient shot type:
 
 ```text
-┌───────────────────────────────────────────────────────────┐
-│  Client (TanStack Start SSR + React 19 + Tailwind v4)     │
-│  • Marketing site  • Studio  • Dashboard  • Billing       │
-└─────────────┬─────────────────────────────┬───────────────┘
-              │ useServerFn / loaders       │ Realtime (Supabase)
-┌─────────────▼─────────────────────────────▼───────────────┐
-│  Server Layer (createServerFn + /api/public/* routes)     │
-│  • Auth middleware  • Credit ledger  • Job orchestrator   │
-│  • Stripe webhooks  • Platform publish (Meta/TikTok/Ads)  │
-└─────────────┬─────────────────────────────┬───────────────┘
-              │                             │
-     ┌────────▼────────┐            ┌───────▼────────────┐
-     │ Lovable Cloud   │            │  AI Orchestrator   │
-     │ (Supabase)      │            │  (modular adapter) │
-     │ • Postgres+RLS  │            │  • Script (GPT)    │
-     │ • Auth          │            │  • Image (Gemini)  │
-     │ • Storage       │            │  • Video (Veo/etc) │
-     │ • Realtime      │            │  • TTS/Music       │
-     │ • pg_cron       │            │  • Vision/Brand    │
-     └─────────────────┘            └────────────────────┘
+business media / imported photos   -> free
+motion graphics + typography       -> free (browser renderer)
+AI still image                     -> cheap
+AI spokesperson video              -> expensive, only for talking beats
 ```
 
-**Job flow**: request → validate credits → insert `jobs` row (queued) → pg_cron worker polls → adapter runs step → updates row + emits realtime → client streams progress → final asset in Storage → credits debited on success.
+Rules: at most one or two AI video shots per ad, spokesperson video only when a character is selected and the beat is a talking beat, everything else assembled by the existing browser renderer. The renderer stays the assembly and fallback layer — if any AI shot fails, the beat degrades to a graphics/photo shot instead of failing the ad.
 
----
+## Technical detail
 
-## Database Schema (Postgres, all `public.` with RLS + GRANTs)
+### Files to modify
+- `src/lib/brand.functions.ts` — keep `researchBrand` (quick), add `deepScanWebsite`, `getBusinessProfile`, `confirmBusinessProfile`, `importBrandAsset`.
+- New `src/lib/research/crawl.server.ts` (fetch/discover/extract, same-origin, capped pages, timeouts) and `src/lib/research/profile.server.ts` (AI consolidation + provenance types).
+- New `src/lib/business-profile.ts` — client-safe types for profile, provenance, creative brief.
+- `src/lib/library.functions.ts` — extend `CastSchema` and CRUD for reference images, appearance metadata, voice config, provider ids, generation settings, consent fields.
+- New `src/lib/director.server.ts` — brief + profile + character -> shot list with `shot_type` per beat and a cost estimate.
+- `src/lib/providers/types.ts` + `index.server.ts` — `generateAdScript` accepts a business profile and character; add `characterRef` to `VideoProvider.generateScene`; keep mock fallbacks.
+- `src/lib/ads.functions.ts` — plan generation reads a confirmed profile when `brandId`/`profileId` given; persist `shot_list`/character id; credit accounting unchanged in total.
+- `src/lib/ad-types.ts` — add `shot_type` to `AdScene`, add character/voice refs to `AdPlan`.
+- `src/routes/_authenticated/brands.tsx` — quick vs deep scan, progress, review/confirm screen with facts vs AI suggestions.
+- `src/routes/_authenticated/cast.tsx` — full character studio editor (reference image upload, appearance fields, voice config, consent).
+- `src/routes/_authenticated/create.tsx` — pick a confirmed business profile; character selection wired through to the plan.
+- `src/lib/render/ad-renderer.ts` — honor `shot_type` (video clip vs image vs graphics beat); existing behaviour preserved as the default.
 
-- `profiles` (id→auth.users, full_name, avatar_url, default_brand_id)
-- `user_roles` (user_id, role enum: admin/user) + `has_role()` SECURITY DEFINER
-- `brands` (id, owner_id, name, website_url, logo_url, primary_color, secondary_color, tone, tagline, guidelines_md, extracted_json)
-- `brand_assets` (id, brand_id, type: logo/product/font/image, storage_path, meta)
-- `projects` (id, owner_id, brand_id, title, status, thumbnail_url)
-- `project_collaborators` (project_id, user_id, role)
-- `scripts` (id, project_id, title, hook, beats_json, voiceover_text, duration_s)
-- `storyboards` (id, project_id, scenes_json)
-- `characters` / `products` / `locations` (id, brand_id, name, reference_urls[], embedding)
-- `assets` (id, project_id, kind: image/video/audio/vo/music/sfx, storage_path, duration_s, meta)
-- `videos` (id, project_id, master_asset_id, aspect_ratio, resolution, watermark bool)
-- `jobs` (id, owner_id, project_id, kind enum, status enum, input_json, output_json, error, progress, cost_credits, model_id, created_at, started_at, finished_at)
-- `credit_ledger` (id, user_id, delta, reason, job_id, stripe_event_id) — signed rows, balance = sum
-- `subscriptions` (user_id, stripe_customer_id, stripe_sub_id, tier enum, seats, status, current_period_end, monthly_credit_grant)
-- `credit_topups` (id, user_id, stripe_session_id, credits, amount_cents)
-- `publish_targets` (id, user_id, platform: meta/tiktok/google, oauth_json)
-- `publications` (id, video_id, target_id, status, external_id, url)
-- `audit_log`, `usage_events` (analytics)
+### Migrations
+- `business_profiles` — owner_id, brand_id, website_url, status (`scanning`/`ready`/`confirmed`), profile_json, brief_json, provenance_json, confirmed_at. Owner-scoped RLS + GRANTs to `authenticated`/`service_role`.
+- `business_pages` — owner_id, profile_id, url, page_type, title, extracted_json, fetched_at. Same policies.
+- `cast_members` — add `appearance_json`, `voice_json`, `generation_json`, `reference_images` (jsonb array), `voice_provider`, `voice_provider_ref`, `consent_by`, `consent_at`, `consent_scope`. Additive with defaults so existing rows (including Shane) keep working.
+- `projects` — add `business_profile_id`, `character_id`, `shot_list_json`.
+- No changes to storage buckets; reference images live in the existing private `project-assets` bucket under `<uid>/characters/`.
 
-All user tables: `ENABLE RLS`, owner-scoped policies via `auth.uid()` or `has_role`. Every table gets explicit `GRANT` to `authenticated` + `service_role`.
+### Providers and credits
+- All AI text/image/video keeps going through the Lovable AI Gateway helpers already in `ai-gateway.server.ts`; Fal stays opt-in behind `FAL_ENABLED`. ElevenLabs voice stays optional and hidden when unconfigured.
+- Credits: quick scan free (as today), deep scan 2 credits (refunded on failure), plan 2, render 8 — a standard ad stays at 10 total. AI spokesperson shots are metered separately and only charged when a real video provider is configured; in demo mode the director returns free graphics shots.
+- Crawl safety: same-origin only, robots-respecting, 10-page and byte caps, 8s per-request timeout, no private-network hosts.
 
----
-
-## Server Layer
-
-- **`src/lib/*.functions.ts`** (createServerFn + `requireSupabaseAuth`):
-  - `brand.research(url)` — scrape + vision + LLM → brand JSON
-  - `brand.upsert`, `brand.uploadAsset`
-  - `project.create/list/get/update`
-  - `script.generate(brief)`, `storyboard.generate(scriptId)`
-  - `video.generate(mode, params)` — enqueues job(s)
-  - `video.edit(naturalLanguage)`, `video.extend`, `video.replaceScene`
-  - `credits.balance`, `credits.reserve/refund`
-  - `billing.createCheckout(tier|topup)`, `billing.openPortal`
-  - `publish.connect(platform)`, `publish.push(videoId, targetId)`
-- **`src/routes/api/public/`** (raw HTTP, signature-verified):
-  - `stripe/webhook` — subs, invoices, top-ups → credit_ledger
-  - `worker/tick` — pg_cron beats this to advance queued jobs
-  - `oauth/{meta|tiktok|google}/callback`
-- **AI adapter** (`src/lib/ai/*.server.ts`): interface `{ script, image, video, tts, music, vision }` with concrete adapters (Lovable AI Gateway default; pluggable Runway/Veo/ElevenLabs behind env keys).
-
----
-
-## Credits & Billing
-
-- **Tiers** (Stripe Products, seeded via migration):
-  - Free: 30 credits/mo, watermark, 720p, 1 seat
-  - Pro $49/mo (or $470/yr): 1,500 credits, no watermark, 1080p, 3 brands
-  - Business $149/mo: 5,000 credits, 5 seats, 4K, priority queue, publish integrations
-  - Enterprise: custom (contact form)
-- **Top-ups**: $10 / 250 cr, $40 / 1,200 cr, $150 / 5,000 cr
-- **Consumption** (indicative, stored per model in `model_costs` table):
-  - Script: 1 cr · Storyboard: 3 cr · Image gen: 2 cr/img · Video 5s 720p: 25 cr · 1080p: 50 cr · TTS: 1 cr/100 chars
-- Flow: reserve on job insert, refund on failure, commit on success.
-
----
-
-## UI / Page Flows
-
-Marketing (public routes):
-- `/` hero + reel · `/features` · `/pricing` · `/examples` · `/enterprise` · `/blog` · `/auth`
-
-App (`/_authenticated/*`):
-- `/dashboard` — projects grid, credits, recent renders
-- `/brands` + `/brands/$id` — brand builder (URL research, uploads, guidelines)
-- `/studio/new` — mode picker (Prompt · Image · URL · Extend · Elements · Style Gallery)
-- `/studio/$projectId` — 3-panel: left scenes/timeline, center preview, right controls (shots, lighting, mood, pacing, dialogue, AI edit chat)
-- `/library` — assets/characters/products/locations
-- `/publish/$videoId` — platform pickers
-- `/billing` — plan, usage graph, invoices, portal
-- `/settings` — team, API keys, brand defaults
-- `/admin` (role-gated) — jobs monitor, cost analytics
-
-Design system: cinematic dark theme (deep charcoal, warm accent, film-grain hero video), semantic oklch tokens in `src/styles.css` (no hardcoded colors), shadcn variants for `hero`/`cinematic`/`premium` buttons.
-
----
-
-## Phased Delivery
-
-**Phase 1 — Foundation (this turn's build target)**
-1. Enable Lovable Cloud + email/Google auth
-2. Design system + landing page + pricing page + auth page
-3. Schema: profiles, user_roles, brands, brand_assets, projects, jobs, credit_ledger, subscriptions
-4. Brand builder (URL → research via Lovable AI + fetch) with logo upload
-5. `/studio/new` prompt-to-storyboard + AI script generation (text pipeline working end-to-end, video step stubbed to image storyboard)
-6. Dashboard + credits display + free tier auto-grant on signup
-
-**Phase 2 — Video pipeline**
-- Enable Stripe Payments, seed tiers, webhook → ledger
-- Image-to-video + prompt-to-video via adapter (starts on Lovable AI image gen, video adapter interface with mocked renderer until you plug Veo/Runway keys)
-- pg_cron worker + realtime progress
-- Timeline editor + scene regenerate
-
-**Phase 3 — Advanced**
-- Voiceover (TTS), music/SFX, characters/products consistency
-- Natural-language edit assistant, extend, replace scene, compliance checks
-- Meta / TikTok / Google Ads publish (OAuth + upload)
-- Team seats, collaboration, admin analytics
-
----
-
-## Technical Details
-
-- **AI defaults**: `openai/gpt-5.5` (script, brand research, edit assistant), `google/gemini-3-pro-image` (storyboard frames, style transfer), video/TTS behind adapter (mock in Phase 1, plug real models when keys added via `add_secret`).
-- **Jobs**: single `jobs` table, states `queued|running|succeeded|failed|canceled`, `kind` enum drives adapter dispatch. pg_cron every minute hits `/api/public/worker/tick` with HMAC-signed body.
-- **Storage buckets**: `brand-assets` (private), `project-assets` (private), `renders` (private, signed URLs), `public-showcase` (public).
-- **Security**: RLS everywhere, roles in `user_roles` only, webhook signature verification, rate-limit reservations via credit ledger, input validation with zod on every server fn.
-- **SEO**: per-route `head()` metadata, sitemap.xml, robots.txt, JSON-LD on landing.
-- **Deployment**: Lovable-managed (Cloudflare Workers runtime for server layer, Supabase for data). No Vercel needed — publish via Lovable's built-in Publish.
-
----
-
-## What I'll build first (Phase 1) if you approve
-
-1. Enable Lovable Cloud
-2. Design system + landing (hero, features, pricing, footer) + auth + `/pricing`
-3. Migrations for `profiles`, `user_roles`, `brands`, `brand_assets`, `projects`, `jobs`, `credit_ledger`, `subscriptions` + auto-grant trigger (30 free credits on signup)
-4. `/dashboard`, `/brands`, `/brands/new` (URL research working), `/studio/new` (prompt → AI-generated script + storyboard frames stored as assets)
-5. Google + email auth, protected `_authenticated` subtree, credits pill in header
-
-Approve to proceed, or tell me to reshape scope (e.g. "skip marketing, start in the studio" or "Phase 1 + Stripe now").
+### Implementation order
+1. Migrations (profiles/pages tables, additive cast + project columns).
+2. Crawler + profile extraction with provenance; deep-scan server functions and job wiring.
+3. Brand scan UI: quick/deep, progress, review-and-confirm.
+4. Character studio schema plumbing + editor UI + reference image upload.
+5. Director module and shot-list generation; plan generation consumes profile + character.
+6. Renderer honors shot types; character reference flows to spokesperson shots.
+7. QA pass: existing ads still open and play, quick scan unchanged, deep scan -> confirm -> ad -> export end to end.
