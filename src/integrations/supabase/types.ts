@@ -162,45 +162,187 @@ export type Database = {
         }
         Relationships: []
       }
+      business_pages: {
+        Row: {
+          created_at: string
+          extracted_json: Json
+          fetched_at: string
+          id: string
+          owner_id: string
+          page_type: string
+          profile_id: string
+          title: string | null
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          extracted_json?: Json
+          fetched_at?: string
+          id?: string
+          owner_id: string
+          page_type?: string
+          profile_id: string
+          title?: string | null
+          url: string
+        }
+        Update: {
+          created_at?: string
+          extracted_json?: Json
+          fetched_at?: string
+          id?: string
+          owner_id?: string
+          page_type?: string
+          profile_id?: string
+          title?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_pages_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_profiles: {
+        Row: {
+          assets_json: Json
+          brand_id: string | null
+          brief_json: Json
+          confirmed_at: string | null
+          created_at: string
+          depth: string
+          error: string | null
+          id: string
+          owner_id: string
+          pages_scanned: number
+          profile_json: Json
+          provenance_json: Json
+          status: string
+          updated_at: string
+          website_url: string
+        }
+        Insert: {
+          assets_json?: Json
+          brand_id?: string | null
+          brief_json?: Json
+          confirmed_at?: string | null
+          created_at?: string
+          depth?: string
+          error?: string | null
+          id?: string
+          owner_id: string
+          pages_scanned?: number
+          profile_json?: Json
+          provenance_json?: Json
+          status?: string
+          updated_at?: string
+          website_url: string
+        }
+        Update: {
+          assets_json?: Json
+          brand_id?: string | null
+          brief_json?: Json
+          confirmed_at?: string | null
+          created_at?: string
+          depth?: string
+          error?: string | null
+          id?: string
+          owner_id?: string
+          pages_scanned?: number
+          profile_json?: Json
+          provenance_json?: Json
+          status?: string
+          updated_at?: string
+          website_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_profiles_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cast_members: {
         Row: {
+          appearance_json: Json
+          appearance_prompt: string | null
           attributes: Json
+          consent_at: string | null
+          consent_by: string | null
+          consent_scope: string | null
           created_at: string
           description: string
+          generation_json: Json
+          generation_seed: number | null
           id: string
           kind: string
           name: string
           owner_id: string
+          primary_reference_path: string | null
           provider_ref: string | null
+          reference_images: Json
           reference_url: string | null
           rights_confirmed: boolean
           updated_at: string
+          voice_json: Json
+          voice_provider: string | null
+          voice_provider_ref: string | null
         }
         Insert: {
+          appearance_json?: Json
+          appearance_prompt?: string | null
           attributes?: Json
+          consent_at?: string | null
+          consent_by?: string | null
+          consent_scope?: string | null
           created_at?: string
           description?: string
+          generation_json?: Json
+          generation_seed?: number | null
           id?: string
           kind: string
           name: string
           owner_id: string
+          primary_reference_path?: string | null
           provider_ref?: string | null
+          reference_images?: Json
           reference_url?: string | null
           rights_confirmed?: boolean
           updated_at?: string
+          voice_json?: Json
+          voice_provider?: string | null
+          voice_provider_ref?: string | null
         }
         Update: {
+          appearance_json?: Json
+          appearance_prompt?: string | null
           attributes?: Json
+          consent_at?: string | null
+          consent_by?: string | null
+          consent_scope?: string | null
           created_at?: string
           description?: string
+          generation_json?: Json
+          generation_seed?: number | null
           id?: string
           kind?: string
           name?: string
           owner_id?: string
+          primary_reference_path?: string | null
           provider_ref?: string | null
+          reference_images?: Json
           reference_url?: string | null
           rights_confirmed?: boolean
           updated_at?: string
+          voice_json?: Json
+          voice_provider?: string | null
+          voice_provider_ref?: string | null
         }
         Relationships: []
       }
@@ -338,6 +480,8 @@ export type Database = {
           brand_id: string | null
           brief: string | null
           business_json: Json | null
+          business_profile_id: string | null
+          character_id: string | null
           created_at: string
           credits_used: number
           duration_seconds: number | null
@@ -353,6 +497,7 @@ export type Database = {
           render_provider: string | null
           series_id: string | null
           series_index: number | null
+          shot_list_json: Json | null
           status: string
           supabase_video_path: string | null
           thumbnail_url: string | null
@@ -368,6 +513,8 @@ export type Database = {
           brand_id?: string | null
           brief?: string | null
           business_json?: Json | null
+          business_profile_id?: string | null
+          character_id?: string | null
           created_at?: string
           credits_used?: number
           duration_seconds?: number | null
@@ -383,6 +530,7 @@ export type Database = {
           render_provider?: string | null
           series_id?: string | null
           series_index?: number | null
+          shot_list_json?: Json | null
           status?: string
           supabase_video_path?: string | null
           thumbnail_url?: string | null
@@ -398,6 +546,8 @@ export type Database = {
           brand_id?: string | null
           brief?: string | null
           business_json?: Json | null
+          business_profile_id?: string | null
+          character_id?: string | null
           created_at?: string
           credits_used?: number
           duration_seconds?: number | null
@@ -413,6 +563,7 @@ export type Database = {
           render_provider?: string | null
           series_id?: string | null
           series_index?: number | null
+          shot_list_json?: Json | null
           status?: string
           supabase_video_path?: string | null
           thumbnail_url?: string | null
@@ -428,6 +579,20 @@ export type Database = {
             columns: ["brand_id"]
             isOneToOne: false
             referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_business_profile_id_fkey"
+            columns: ["business_profile_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "cast_members"
             referencedColumns: ["id"]
           },
           {
@@ -682,12 +847,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -711,11 +876,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -736,11 +901,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -761,11 +926,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -778,11 +943,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

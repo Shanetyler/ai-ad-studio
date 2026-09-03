@@ -127,7 +127,7 @@ export const EMPTY_PROFILE: BusinessProfileData = {
 export type BusinessProfileRow = {
   id: string;
   website_url: string;
-  scan_depth: string;
+  depth: string;
   status: string;
   pages_scanned: number;
   profile_json: BusinessProfileData;

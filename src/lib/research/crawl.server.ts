@@ -335,11 +335,9 @@ export async function crawlSite(startUrl: string, maxPages = CRAWL_LIMITS.maxPag
   const ordered = [...candidates.values()].sort((a, b) => b.score - a.score);
   // Prefer type diversity: one page per type first, then fill remaining slots.
   const usedTypes = new Set<PageType>(pages.map((p) => p.page_type));
-  const queue = [
-    ...ordered.filter((c) => !usedTypes.has(c.type) && (usedTypes.add(c.type), true)),
-    ...ordered.filter((c) => !c),
-  ];
-  for (const c of [...queue, ...ordered]) {
+  const diverse = ordered.filter((c) => !usedTypes.has(c.type) && (usedTypes.add(c.type), true));
+  const rest = ordered.filter((c) => !diverse.includes(c));
+  for (const c of [...diverse, ...rest]) {
     if (pages.length >= maxPages || Date.now() > deadline) break;
     await visit(c.url, c.type);
   }
