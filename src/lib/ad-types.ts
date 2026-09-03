@@ -131,6 +131,7 @@ export type AdStyle = {
 
 export const CREDITS_PER_AD = 10;
 export const PLAN_CREDIT_COST = 2;
+export const DEEP_SCAN_CREDIT_COST = 2;
 export const RENDER_CREDIT_COST = 8;
 
 export type PricingPlan = {
