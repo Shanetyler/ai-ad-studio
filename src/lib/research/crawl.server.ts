@@ -327,7 +327,7 @@ export async function crawlSite(startUrl: string, maxPages = CRAWL_LIMITS.maxPag
     const type = classifyPage(url, anchor);
     if (type === "blog") return;
     const depthPenalty = url.pathname.split("/").filter(Boolean).length * 2;
-    candidates.set(key, { url, type, score: score(type) - depthPenalty });
+    candidates.set(key, { url, type, score: pageScore(type) - depthPenalty });
   };
 
   for (const link of home?.links ?? []) consider(link.url, link.anchor);
