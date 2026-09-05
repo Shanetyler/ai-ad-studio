@@ -42,12 +42,14 @@ export const scanWebsite = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { crawlSinglePage, crawlSite, isSafePublicUrl } = await import("./research/crawl.server");
+    const { crawlSiteWithFirecrawl, firecrawlAvailable } = await import("./research/firecrawl.server");
     const { buildProfile } = await import("./research/profile.server");
 
     const normalized = /^https?:\/\//i.test(data.url) ? data.url : `https://${data.url}`;
     const safe = isSafePublicUrl(normalized);
     if (!safe.ok || !safe.url) throw new Error(safe.reason ?? "That URL cannot be scanned.");
     const websiteUrl = safe.url.toString();
+
 
     const { data: profileRow, error: pErr } = await supabase
       .from("business_profiles")
@@ -86,9 +88,27 @@ export const scanWebsite = createServerFn({ method: "POST" })
       }
     }
 
+    let crawler: "firecrawl" | "builtin" = "builtin";
     try {
-      const crawl = data.depth === "deep" ? await crawlSite(websiteUrl) : await crawlSinglePage(websiteUrl);
+      let crawl;
+      if (data.depth === "deep") {
+        if (firecrawlAvailable()) {
+          try {
+            crawl = await crawlSiteWithFirecrawl(websiteUrl);
+            crawler = "firecrawl";
+          } catch (err) {
+            // Firecrawl unavailable / out of credits: fall back to our own crawler.
+            crawl = await crawlSite(websiteUrl);
+            crawl.skipped.push(`Firecrawl unavailable (${String(err instanceof Error ? err.message : err).slice(0, 120)})`);
+          }
+        } else {
+          crawl = await crawlSite(websiteUrl);
+        }
+      } else {
+        crawl = await crawlSinglePage(websiteUrl);
+      }
       if (!crawl.pages.length) throw new Error("We could not read that website. Check the address and try again.");
+
 
       const { profile, brief, provenance, assets } = await buildProfile(crawl.pages, websiteUrl);
 
