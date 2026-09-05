@@ -253,7 +253,7 @@ async function sitemapUrls(origin: string): Promise<string[]> {
 }
 
 /** Scores a candidate page: higher = more useful for a creative brief. */
-function score(type: PageType) {
+export function pageScore(type: PageType) {
   const order: PageType[] = [
     "home",
     "services",
@@ -270,6 +270,7 @@ function score(type: PageType) {
   const i = order.indexOf(type);
   return 100 - (i < 0 ? 99 : i * 5);
 }
+
 
 export type CrawlResult = { pages: ExtractedPage[]; skipped: string[] };
 
@@ -326,7 +327,7 @@ export async function crawlSite(startUrl: string, maxPages = CRAWL_LIMITS.maxPag
     const type = classifyPage(url, anchor);
     if (type === "blog") return;
     const depthPenalty = url.pathname.split("/").filter(Boolean).length * 2;
-    candidates.set(key, { url, type, score: score(type) - depthPenalty });
+    candidates.set(key, { url, type, score: pageScore(type) - depthPenalty });
   };
 
   for (const link of home?.links ?? []) consider(link.url, link.anchor);
