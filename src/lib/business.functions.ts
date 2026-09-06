@@ -153,12 +153,17 @@ export const scanWebsite = createServerFn({ method: "POST" })
             status: "succeeded",
             progress: 100,
             finished_at: new Date().toISOString(),
-            output_json: { pages: crawl.pages.length, profile_id: profileId },
+            output_json: { pages: crawl.pages.length, profile_id: profileId, crawler },
           })
           .eq("id", job.id);
       }
 
-      return { profile: saved, pages: crawl.pages.map((p) => ({ url: p.url, page_type: p.page_type, title: p.title })), skipped: crawl.skipped };
+      return {
+        profile: saved,
+        crawler,
+        pages: crawl.pages.map((p) => ({ url: p.url, page_type: p.page_type, title: p.title })),
+        skipped: crawl.skipped,
+      };
     } catch (err) {
       const message = String(err instanceof Error ? err.message : err).slice(0, 400);
       if (data.depth === "deep") {
@@ -166,7 +171,7 @@ export const scanWebsite = createServerFn({ method: "POST" })
           _user_id: userId,
           _amount: DEEP_SCAN_CREDIT_COST,
           _reason: "deep_scan_failed",
-          _job_id: job?.id ?? null,
+          _job_id: job?.id,
         });
       }
       await supabase.from("business_profiles").update({ status: "failed", error: message }).eq("id", profileId);
@@ -306,7 +311,15 @@ export const importDiscoveredAsset = createServerFn({ method: "POST" })
     return { url: signed.signedUrl, path };
   });
 
-/** Turns a confirmed profile into a reusable brand kit. */
+/** True when the connected Firecrawl integration is usable for deep crawling. */
+export const deepScanCapabilities = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    const { firecrawlAvailable } = await import("./research/firecrawl.server");
+    return { firecrawl: firecrawlAvailable(), cost: DEEP_SCAN_CREDIT_COST };
+  });
+
+/** Turns a confirmed profile into a reusable brand kit (updates the linked brand if one exists). */
 export const createBrandFromProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
@@ -322,27 +335,52 @@ export const createBrandFromProfile = createServerFn({ method: "POST" })
     const assets = (row.assets_json ?? []) as any[];
     const logo = assets.find((a) => a?.kind === "logo" && a?.imported_url)?.imported_url ?? null;
 
+    const fields = {
+      name: (p.business_name || new URL(row.website_url).hostname).slice(0, 120),
+      website_url: row.website_url,
+      business_type: p.business_type ?? null,
+      tagline: p.one_liner ?? null,
+      tone: (row.brief_json as any)?.tone ?? p.brand_voice ?? null,
+      primary_color: p.primary_color ?? null,
+      secondary_color: p.secondary_color ?? null,
+      phone: p.phone ?? null,
+      address: p.locations?.[0]?.address ?? null,
+      default_cta: p.cta ?? null,
+      ...(logo ? { logo_url: logo } : {}),
+      extracted_json: p,
+    };
+
+    // Reuse the linked brand, or an existing brand for the same website, instead of duplicating.
+    let brandId: string | null = (row.brand_id as string | null) ?? null;
+    if (!brandId) {
+      const { data: existing } = await supabase
+        .from("brands")
+        .select("id")
+        .eq("website_url", row.website_url)
+        .limit(1)
+        .maybeSingle();
+      brandId = (existing?.id as string | undefined) ?? null;
+    }
+
+    if (brandId) {
+      const { data: updated, error: uErr } = await supabase
+        .from("brands")
+        .update(fields as any)
+        .eq("id", brandId)
+        .select("id, name")
+        .single();
+      if (uErr) throw new Error(uErr.message);
+      await supabase.from("business_profiles").update({ brand_id: brandId }).eq("id", data.id);
+      return { brandId: updated.id as string, name: updated.name as string, created: false };
+    }
+
     const { data: brand, error: bErr } = await supabase
       .from("brands")
-      .insert({
-        owner_id: userId,
-        name: (p.business_name || new URL(row.website_url).hostname).slice(0, 120),
-        website_url: row.website_url,
-        business_type: p.business_type ?? null,
-        tagline: p.one_liner ?? null,
-        tone: (row.brief_json as any)?.tone ?? p.brand_voice ?? null,
-        primary_color: p.primary_color ?? null,
-        secondary_color: p.secondary_color ?? null,
-        phone: p.phone ?? null,
-        address: p.locations?.[0]?.address ?? null,
-        default_cta: p.cta ?? null,
-        logo_url: logo,
-        extracted_json: p,
-      } as any)
+      .insert({ ...(fields as any), owner_id: userId })
       .select("id, name")
       .single();
     if (bErr) throw new Error(bErr.message);
 
     await supabase.from("business_profiles").update({ brand_id: brand.id }).eq("id", data.id);
-    return { brandId: brand.id as string, name: brand.name as string };
+    return { brandId: brand.id as string, name: brand.name as string, created: true };
   });
