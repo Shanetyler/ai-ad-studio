@@ -153,12 +153,17 @@ export const scanWebsite = createServerFn({ method: "POST" })
             status: "succeeded",
             progress: 100,
             finished_at: new Date().toISOString(),
-            output_json: { pages: crawl.pages.length, profile_id: profileId },
+            output_json: { pages: crawl.pages.length, profile_id: profileId, crawler },
           })
           .eq("id", job.id);
       }
 
-      return { profile: saved, pages: crawl.pages.map((p) => ({ url: p.url, page_type: p.page_type, title: p.title })), skipped: crawl.skipped };
+      return {
+        profile: saved,
+        crawler,
+        pages: crawl.pages.map((p) => ({ url: p.url, page_type: p.page_type, title: p.title })),
+        skipped: crawl.skipped,
+      };
     } catch (err) {
       const message = String(err instanceof Error ? err.message : err).slice(0, 400);
       if (data.depth === "deep") {
@@ -166,7 +171,7 @@ export const scanWebsite = createServerFn({ method: "POST" })
           _user_id: userId,
           _amount: DEEP_SCAN_CREDIT_COST,
           _reason: "deep_scan_failed",
-          _job_id: job?.id ?? null,
+          _job_id: job?.id,
         });
       }
       await supabase.from("business_profiles").update({ status: "failed", error: message }).eq("id", profileId);
