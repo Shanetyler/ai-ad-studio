@@ -37,3 +37,25 @@ export async function uploadAdVideo(projectId: string, blob: Blob, ext: string):
   if (error) throw new Error(error.message);
   return path;
 }
+
+/**
+ * Uploads a character reference image into the private project-assets bucket under
+ * an owner-scoped, character-scoped path. Returns the storage path (never a public URL).
+ */
+export async function uploadCharacterReference(file: File, characterKey: string): Promise<string> {
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth.user?.id;
+  if (!uid) throw new Error("You must be signed in to upload reference images.");
+  if (!file.type.startsWith("image/")) throw new Error("Reference images must be PNG, JPG or WEBP.");
+  if (file.size > 8 * 1024 * 1024) throw new Error("Reference images must be smaller than 8 MB.");
+
+  const ext = (file.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const safeKey = characterKey.replace(/[^a-zA-Z0-9-]/g, "").slice(0, 40) || "draft";
+  const path = `${uid}/characters/${safeKey}/${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage.from("project-assets").upload(path, file, {
+    contentType: file.type,
+    upsert: false,
+  });
+  if (error) throw new Error(error.message);
+  return path;
+}
