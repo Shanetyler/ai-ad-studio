@@ -173,6 +173,8 @@ export const generateAdPlan = createServerFn({ method: "POST" })
     const title = `${business.business_name} — ${style.ad_type}`.slice(0, 120);
     let projectId = data.projectId;
 
+const charId = /^[0-9a-f-]{36}$/i.test(plan.character_id ?? "") ? plan.character_id! : null;
+
     if (projectId) {
       const { error } = await supabase
         .from("projects")
@@ -186,6 +188,7 @@ export const generateAdPlan = createServerFn({ method: "POST" })
           aspect_ratio: style.aspect,
           duration_target: style.duration,
           brand_id: data.brandId ?? null,
+          character_id: charId,
           status: "planned",
         })
         .eq("id", projectId);
@@ -204,6 +207,7 @@ export const generateAdPlan = createServerFn({ method: "POST" })
           aspect_ratio: style.aspect,
           duration_target: style.duration,
           brand_id: data.brandId ?? null,
+          character_id: charId,
           status: "planned",
         })
         .select("id")
