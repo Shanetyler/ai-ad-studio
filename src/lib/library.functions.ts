@@ -2,9 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { buildAppearancePrompt } from "@/lib/character";
-import { CHARACTER_COLUMNS, signReference } from "@/lib/character.server";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+const CHARACTER_COLUMNS =
+  "id, kind, name, description, attributes, reference_url, reference_images, primary_reference_path, appearance_json, appearance_prompt, voice_json, voice_provider, voice_provider_ref, generation_json, generation_seed, rights_confirmed, consent_by, consent_at, consent_scope, provider_ref, created_at";
 
 const ReferenceImageSchema = z.object({
   path: z.string().min(1).max(500),
@@ -74,6 +76,7 @@ export const getCastReferenceUrls = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ paths: z.array(z.string().max(500)).max(16) }).parse(input))
   .handler(async ({ data, context }) => {
+    const { signReference } = await import("@/lib/character.server");
     const out: Record<string, string> = {};
     for (const path of data.paths) {
       const url = await signReference(context.supabase, path, 60 * 60);
