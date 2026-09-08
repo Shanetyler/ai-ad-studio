@@ -71,35 +71,62 @@ export const listCast = createServerFn({ method: "GET" })
     return (data ?? []) as any[];
   });
 
+/**
+ * Collects every reference path the caller legitimately owns: paths recorded on
+ * their own cast_members rows, plus editor paths under one of their own
+ * character folders (`<uid>/characters/<characterId>/...`) which are uploaded
+ * before the row's reference list is persisted.
+ */
+async function ownedReferencePaths(supabase: any, userId: string) {
+  const { data, error } = await supabase.from("cast_members").select("id, reference_images, primary_reference_path");
+  if (error) throw new Error(error.message);
+  const recorded = new Set<string>();
+  const folders = new Set<string>();
+  for (const row of (data ?? []) as any[]) {
+    folders.add(`${userId}/characters/${row.id}/`);
+    if (row.primary_reference_path) recorded.add(row.primary_reference_path);
+    for (const r of (row.reference_images ?? []) as { path?: string }[]) if (r?.path) recorded.add(r.path);
+  }
+  return {
+    allows: (path: string) => recorded.has(path) || Array.from(folders).some((f) => path.startsWith(f)),
+  };
+}
+
 /** Signs the private reference images for one character so the UI can preview them. */
 export const getCastReferenceUrls = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ paths: z.array(z.string().max(500)).max(16) }).parse(input))
   .handler(async ({ data, context }) => {
     const { signReference } = await import("@/lib/character.server");
+    const guard = await ownedReferencePaths(context.supabase, context.userId);
     const out: Record<string, string> = {};
     for (const path of data.paths) {
+      if (!guard.allows(path)) continue;
       const url = await signReference(context.supabase, path, 60 * 60);
       if (url) out[path] = url;
     }
     return out;
   });
 
-/** Truthful capability report for the Character Studio (no fake cloning claims). */
-export const getCastCapabilities = createServerFn({ method: "GET" }).handler(async () => {
-  const { providerStatus } = await import("@/lib/providers/index.server");
-  const status = providerStatus();
-  const video = status.providers.find((p) => p.kind === "video");
-  const voice = status.providers.find((p) => p.kind === "voice");
-  const image = status.providers.find((p) => p.kind === "image");
-  return {
-    spokespersonVideo: { configured: !!video?.configured, id: video?.id ?? null },
-    voice: { configured: !!voice?.configured, id: voice?.id ?? null },
-    stills: { configured: !!image?.configured, id: image?.id ?? null },
-    /** No configured provider performs face or voice cloning. */
-    cloning: false,
-  };
-});
+/**
+ * Truthful capability report for the Character Studio (no fake cloning claims).
+ * Only booleans are exposed — provider identifiers stay server-side.
+ */
+export const getCastCapabilities = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    const { providerStatus } = await import("@/lib/providers/index.server");
+    const status = providerStatus();
+    const configured = (kind: string) => !!status.providers.find((p) => p.kind === kind)?.configured;
+    return {
+      spokespersonVideo: { configured: configured("video") },
+      voice: { configured: configured("voice") },
+      stills: { configured: configured("image") },
+      /** No configured provider performs face or voice cloning. */
+      cloning: false,
+    };
+  });
+
 
 export const saveCast = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
