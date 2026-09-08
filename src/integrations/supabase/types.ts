@@ -276,6 +276,7 @@ export type Database = {
           consent_at: string | null
           consent_by: string | null
           consent_scope: string | null
+          consent_user_id: string | null
           created_at: string
           description: string
           generation_json: Json
@@ -301,6 +302,7 @@ export type Database = {
           consent_at?: string | null
           consent_by?: string | null
           consent_scope?: string | null
+          consent_user_id?: string | null
           created_at?: string
           description?: string
           generation_json?: Json
@@ -326,6 +328,7 @@ export type Database = {
           consent_at?: string | null
           consent_by?: string | null
           consent_scope?: string | null
+          consent_user_id?: string | null
           created_at?: string
           description?: string
           generation_json?: Json

@@ -71,35 +71,62 @@ export const listCast = createServerFn({ method: "GET" })
     return (data ?? []) as any[];
   });
 
+/**
+ * Collects every reference path the caller legitimately owns: paths recorded on
+ * their own cast_members rows, plus editor paths under one of their own
+ * character folders (`<uid>/characters/<characterId>/...`) which are uploaded
+ * before the row's reference list is persisted.
+ */
+async function ownedReferencePaths(supabase: any, userId: string) {
+  const { data, error } = await supabase.from("cast_members").select("id, reference_images, primary_reference_path");
+  if (error) throw new Error(error.message);
+  const recorded = new Set<string>();
+  const folders = new Set<string>();
+  for (const row of (data ?? []) as any[]) {
+    folders.add(`${userId}/characters/${row.id}/`);
+    if (row.primary_reference_path) recorded.add(row.primary_reference_path);
+    for (const r of (row.reference_images ?? []) as { path?: string }[]) if (r?.path) recorded.add(r.path);
+  }
+  return {
+    allows: (path: string) => recorded.has(path) || Array.from(folders).some((f) => path.startsWith(f)),
+  };
+}
+
 /** Signs the private reference images for one character so the UI can preview them. */
 export const getCastReferenceUrls = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ paths: z.array(z.string().max(500)).max(16) }).parse(input))
   .handler(async ({ data, context }) => {
     const { signReference } = await import("@/lib/character.server");
+    const guard = await ownedReferencePaths(context.supabase, context.userId);
     const out: Record<string, string> = {};
     for (const path of data.paths) {
+      if (!guard.allows(path)) continue;
       const url = await signReference(context.supabase, path, 60 * 60);
       if (url) out[path] = url;
     }
     return out;
   });
 
-/** Truthful capability report for the Character Studio (no fake cloning claims). */
-export const getCastCapabilities = createServerFn({ method: "GET" }).handler(async () => {
-  const { providerStatus } = await import("@/lib/providers/index.server");
-  const status = providerStatus();
-  const video = status.providers.find((p) => p.kind === "video");
-  const voice = status.providers.find((p) => p.kind === "voice");
-  const image = status.providers.find((p) => p.kind === "image");
-  return {
-    spokespersonVideo: { configured: !!video?.configured, id: video?.id ?? null },
-    voice: { configured: !!voice?.configured, id: voice?.id ?? null },
-    stills: { configured: !!image?.configured, id: image?.id ?? null },
-    /** No configured provider performs face or voice cloning. */
-    cloning: false,
-  };
-});
+/**
+ * Truthful capability report for the Character Studio (no fake cloning claims).
+ * Only booleans are exposed — provider identifiers stay server-side.
+ */
+export const getCastCapabilities = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    const { providerStatus } = await import("@/lib/providers/index.server");
+    const status = providerStatus();
+    const configured = (kind: string) => !!status.providers.find((p) => p.kind === kind)?.configured;
+    return {
+      spokespersonVideo: { configured: configured("video") },
+      voice: { configured: configured("voice") },
+      stills: { configured: configured("image") },
+      /** No configured provider performs face or voice cloning. */
+      cloning: false,
+    };
+  });
+
 
 export const saveCast = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -142,14 +169,36 @@ export const saveCast = createServerFn({ method: "POST" })
       generation_seed: rest.generation_seed ?? rest.generation_json?.seed ?? null,
       consent_by: consent_by ?? null,
       consent_scope: consent_scope ?? null,
-      consent_at: new Date().toISOString(),
     };
 
     if (id) {
-      const { error } = await supabase.from("cast_members").update(fields as any).eq("id", id);
+      // Read the existing consent state so an edit never rewrites the original
+      // confirmation timestamp. Owner-scoped as defence in depth on top of RLS.
+      const { data: existing, error: readErr } = await supabase
+        .from("cast_members")
+        .select("id, rights_confirmed, consent_at, consent_user_id")
+        .eq("id", id)
+        .eq("owner_id", userId)
+        .maybeSingle();
+      if (readErr) throw new Error(readErr.message);
+      if (!existing) throw new Error("Character not found.");
+
+      const wasConfirmed = Boolean((existing as any).rights_confirmed) && !!(existing as any).consent_at;
+      fields.consent_at = wasConfirmed ? (existing as any).consent_at : new Date().toISOString();
+      fields.consent_user_id = wasConfirmed ? ((existing as any).consent_user_id ?? userId) : userId;
+
+      // owner_id is never part of `fields`, so an update cannot reassign ownership.
+      const { error } = await supabase
+        .from("cast_members")
+        .update(fields as any)
+        .eq("id", id)
+        .eq("owner_id", userId);
       if (error) throw new Error(error.message);
       return { id };
     }
+
+    fields.consent_at = new Date().toISOString();
+    fields.consent_user_id = userId;
     const { data: created, error } = await supabase
       .from("cast_members")
       .insert({ ...(fields as any), owner_id: userId })
@@ -159,34 +208,147 @@ export const saveCast = createServerFn({ method: "POST" })
     return { id: created.id };
   });
 
-export const deleteCast = createServerFn({ method: "POST" })
+/** Clears the confirmation record when the owner revokes rights for a character. */
+export const revokeCastConsent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const { data: row } = await context.supabase
+    const { error } = await context.supabase
       .from("cast_members")
-      .select("reference_images")
+      .update({ rights_confirmed: false, consent_at: null, consent_user_id: null } as any)
       .eq("id", data.id)
-      .maybeSingle();
-    const paths = ((row?.reference_images ?? []) as { path: string }[]).map((r) => r.path).filter(Boolean);
-    if (paths.length) {
-      await context.supabase.storage.from("project-assets").remove(paths);
-    }
-    const { error } = await context.supabase.from("cast_members").delete().eq("id", data.id);
+      .eq("owner_id", context.userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
-/** Removes a single reference image from storage (called before saving the record). */
+/**
+ * Persists the reference list after staged files have been uploaded under the
+ * real character id, and removes storage files the owner dropped while editing.
+ */
+export const updateCastReferences = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        reference_images: z.array(ReferenceImageSchema).max(8).default([]),
+        primary_reference_path: z.string().max(500).nullable().optional(),
+        delete_paths: z.array(z.string().min(1).max(500)).max(16).default([]),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const prefix = `${userId}/characters/${data.id}/`;
+    for (const r of data.reference_images) {
+      if (!r.path.startsWith(`${userId}/`)) throw new Error("Not allowed");
+    }
+    const primary =
+      (data.primary_reference_path && data.reference_images.some((r) => r.path === data.primary_reference_path)
+        ? data.primary_reference_path
+        : data.reference_images.find((r) => r.primary)?.path) ?? data.reference_images[0]?.path ?? null;
+    const refs = data.reference_images.map((r) => ({ ...r, primary: r.path === primary }));
+
+    const { data: updated, error } = await supabase
+      .from("cast_members")
+      .update({ reference_images: refs as any, primary_reference_path: primary })
+      .eq("id", data.id)
+      .eq("owner_id", userId)
+      .select("id")
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!updated) throw new Error("Character not found.");
+
+    // Only after the record no longer points at them do we drop the old files.
+    const removable = data.delete_paths.filter((p) => p.startsWith(prefix) || p.startsWith(`${userId}/characters/`));
+    if (removable.length) {
+      const { error: rmErr } = await supabase.storage.from("project-assets").remove(removable);
+      if (rmErr) return { id: data.id, storage_cleanup_failed: true };
+    }
+    return { id: data.id, storage_cleanup_failed: false };
+  });
+
+export const deleteCast = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: row, error: readErr } = await context.supabase
+      .from("cast_members")
+      .select("id, reference_images")
+      .eq("id", data.id)
+      .eq("owner_id", context.userId)
+      .maybeSingle();
+    if (readErr) throw new Error(readErr.message);
+    if (!row) throw new Error("Character not found.");
+
+    // Never orphan a project's selected character.
+    const { count, error: countErr } = await context.supabase
+      .from("projects")
+      .select("id", { count: "exact", head: true })
+      .eq("character_id", data.id);
+    if (countErr) throw new Error(countErr.message);
+    if ((count ?? 0) > 0) {
+      throw new Error(
+        `This character is used by ${count} project${count === 1 ? "" : "s"}. Remove it from those projects before deleting it.`,
+      );
+    }
+
+    const paths = ((row.reference_images ?? []) as { path: string }[]).map((r) => r.path).filter(Boolean);
+    const { error } = await context.supabase
+      .from("cast_members")
+      .delete()
+      .eq("id", data.id)
+      .eq("owner_id", context.userId);
+    if (error) throw new Error(error.message);
+
+    let storage_cleanup_failed = false;
+    if (paths.length) {
+      const { error: rmErr } = await context.supabase.storage.from("project-assets").remove(paths);
+      storage_cleanup_failed = !!rmErr;
+    }
+    return { ok: true, storage_cleanup_failed };
+  });
+
+/** Removes a single reference image belonging to one of the caller's characters. */
 export const deleteCastReference = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ path: z.string().min(1).max(500) }).parse(input))
+  .inputValidator((input: unknown) =>
+    z.object({ characterId: z.string().uuid(), path: z.string().min(1).max(500) }).parse(input),
+  )
   .handler(async ({ data, context }) => {
-    if (!data.path.startsWith(`${context.userId}/`)) throw new Error("Not allowed");
-    const { error } = await context.supabase.storage.from("project-assets").remove([data.path]);
+    const { supabase, userId } = context;
+    const { data: row, error: readErr } = await supabase
+      .from("cast_members")
+      .select("id, reference_images, primary_reference_path")
+      .eq("id", data.characterId)
+      .eq("owner_id", userId)
+      .maybeSingle();
+    if (readErr) throw new Error(readErr.message);
+    if (!row) throw new Error("Character not found.");
+
+    const refs = ((row.reference_images ?? []) as { path: string }[]) ?? [];
+    const belongsToCharacter =
+      refs.some((r) => r.path === data.path) ||
+      row.primary_reference_path === data.path ||
+      data.path.startsWith(`${userId}/characters/${data.characterId}/`);
+    if (!belongsToCharacter) throw new Error("Not allowed");
+
+    const remaining = refs.filter((r) => r.path !== data.path);
+    const primary =
+      row.primary_reference_path === data.path ? (remaining[0]?.path ?? null) : row.primary_reference_path;
+    const { error: updErr } = await supabase
+      .from("cast_members")
+      .update({ reference_images: remaining as any, primary_reference_path: primary })
+      .eq("id", data.characterId)
+      .eq("owner_id", userId);
+    if (updErr) throw new Error(updErr.message);
+
+    const { error } = await supabase.storage.from("project-assets").remove([data.path]);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
 
 /** Production view of a saved character, used by the generation pipeline. */
 export const getCharacterProduction = createServerFn({ method: "POST" })
