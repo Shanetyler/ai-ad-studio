@@ -15,13 +15,13 @@ import { toast } from "sonner";
 import { ImagePlus, Loader2, Pencil, Plus, Star, Trash2, UserRound, X } from "lucide-react";
 import {
   deleteCast,
-  deleteCastReference,
   getCastCapabilities,
   getCastReferenceUrls,
   listCast,
   saveCast,
+  updateCastReferences,
 } from "@/lib/library.functions";
-import { uploadCharacterReference } from "@/lib/uploads";
+import { uploadCharacterReference, validateReferenceFile } from "@/lib/uploads";
 import {
   EMPTY_APPEARANCE,
   EMPTY_VOICE,
@@ -30,6 +30,7 @@ import {
   type CharacterReferenceImage,
   type CharacterVoice,
 } from "@/lib/character";
+
 
 export const Route = createFileRoute("/_authenticated/cast")({
   head: () => ({
