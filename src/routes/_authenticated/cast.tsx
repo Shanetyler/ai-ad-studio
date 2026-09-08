@@ -127,14 +127,25 @@ function CharacterStudio() {
   const listFn = useServerFn(listCast);
   const saveFn = useServerFn(saveCast);
   const delFn = useServerFn(deleteCast);
-  const delRefFn = useServerFn(deleteCastReference);
+  const updRefsFn = useServerFn(updateCastReferences);
   const signFn = useServerFn(getCastReferenceUrls);
   const capsFn = useServerFn(getCastCapabilities);
 
   const [draft, setDraft] = useState<Draft>(emptyDraft("character"));
-  const [uploading, setUploading] = useState(false);
+  /** Non-null while a save/upload sequence is running; holds the step label. */
+  const [busy, setBusy] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft((d) => ({ ...d, [k]: v }));
+
+  // Revoke every preview URL we created when the studio unmounts.
+  const objectUrls = useRef<Set<string>>(new Set());
+  useEffect(
+    () => () => {
+      objectUrls.current.forEach((u) => URL.revokeObjectURL(u));
+      objectUrls.current.clear();
+    },
+    [],
+  );
 
   const { data: cast, isLoading, isError, error } = useQuery({
     queryKey: ["cast"],
@@ -165,9 +176,24 @@ function CharacterStudio() {
     [draft.appearance_prompt, draft.name, draft.description, draft.appearance],
   );
 
-  const save = useMutation({
-    mutationFn: () =>
-      saveFn({
+  function releaseStaged(items: Staged[]) {
+    items.forEach((s) => {
+      URL.revokeObjectURL(s.url);
+      objectUrls.current.delete(s.url);
+    });
+  }
+
+  /**
+   * Saves metadata first, then uploads any staged files under the real character
+   * id, then persists the reference list and clears removed files. Partial
+   * failures are reported and the character stays editable.
+   */
+  async function handleSave() {
+    const keptRefs = draft.reference_images.map((r) => ({ path: r.path, ...(r.label ? { label: r.label } : {}) }));
+    const primaryIsPath = draft.primary_reference_path && keptRefs.some((r) => r.path === draft.primary_reference_path);
+    setBusy("Saving character…");
+    try {
+      const res = await saveFn({
         data: {
           ...(draft.id ? { id: draft.id } : {}),
           kind: draft.kind,
@@ -176,8 +202,8 @@ function CharacterStudio() {
           attributes: {},
           ...(draft.reference_url.trim() ? { reference_url: draft.reference_url.trim() } : {}),
           rights_confirmed: draft.rights_confirmed,
-          reference_images: draft.reference_images,
-          primary_reference_path: draft.primary_reference_path,
+          reference_images: keptRefs,
+          primary_reference_path: primaryIsPath ? draft.primary_reference_path : null,
           appearance_json: draft.appearance,
           appearance_prompt: previewPrompt,
           voice_json: draft.voice,
@@ -188,69 +214,167 @@ function CharacterStudio() {
           consent_by: draft.consent_by.trim() || null,
           consent_scope: draft.consent_scope.trim() || null,
         },
-      }),
-    onSuccess: () => {
-      toast.success(draft.id ? "Character updated" : draft.kind === "character" ? "Character saved" : "Voice saved");
-      setDraft(emptyDraft(draft.kind));
+      });
+      const id = res.id as string;
+
+      const uploaded: CharacterReferenceImage[] = [];
+      const failedStaged: Staged[] = [];
+      const uploadedStaged: Staged[] = [];
+      if (draft.staged.length) {
+        setBusy(`Uploading ${draft.staged.length} reference${draft.staged.length > 1 ? "s" : ""}…`);
+        for (const s of draft.staged) {
+          try {
+            const path = await uploadCharacterReference(s.file, id);
+            uploaded.push({
+              path,
+              label: s.label,
+              primary: draft.primary_reference_path === s.key,
+            });
+            uploadedStaged.push(s);
+          } catch {
+            failedStaged.push(s);
+          }
+        }
+      }
+
+      let cleanupFailed = false;
+      if (uploaded.length || draft.removed.length) {
+        setBusy("Linking references…");
+        const all = [...keptRefs, ...uploaded];
+        const primary =
+          all.find((r) => (r as CharacterReferenceImage).primary)?.path ??
+          (primaryIsPath ? draft.primary_reference_path : null) ??
+          all[0]?.path ??
+          null;
+        try {
+          const out = await updRefsFn({
+            data: {
+              id,
+              reference_images: all.map((r) => ({ path: r.path, ...(r.label ? { label: r.label } : {}) })),
+              primary_reference_path: primary,
+              delete_paths: draft.removed,
+            },
+          });
+          cleanupFailed = Boolean((out as any)?.storage_cleanup_failed);
+        } catch (e) {
+          // The character itself is saved; surface the reference failure truthfully.
+          queryClient.invalidateQueries({ queryKey: ["cast"] });
+          setDraft((d) => ({ ...d, id }));
+          toast.error(
+            `Character saved, but its reference images could not be linked: ${
+              e instanceof Error ? e.message : "unknown error"
+            }`,
+          );
+          return;
+        }
+      }
+
       queryClient.invalidateQueries({ queryKey: ["cast"] });
-    },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not save"),
-  });
+      releaseStaged(uploadedStaged);
+
+      if (failedStaged.length) {
+        toast.error(
+          `Character saved, but ${failedStaged.length} reference upload${
+            failedStaged.length > 1 ? "s" : ""
+          } failed. They are still attached below — try saving again.`,
+        );
+        setDraft((d) => ({
+          ...d,
+          id,
+          reference_images: [...d.reference_images, ...uploaded.map(({ path, label }) => ({ path, label }))],
+          staged: failedStaged,
+          removed: [],
+        }));
+        return;
+      }
+
+      if (cleanupFailed) toast.warning("Saved. Some old reference files could not be deleted from storage.");
+      toast.success(draft.id ? "Character updated" : draft.kind === "character" ? "Character saved" : "Voice saved");
+      releaseStaged(draft.staged.filter((s) => !uploadedStaged.includes(s)));
+      setDraft(emptyDraft(draft.kind));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not save");
+    } finally {
+      setBusy(null);
+    }
+  }
 
   const remove = useMutation({
     mutationFn: (id: string) => delFn({ data: { id } }),
-    onSuccess: (_r, id) => {
-      toast.success("Removed");
+    onSuccess: (res: any, id) => {
+      if (res?.storage_cleanup_failed) toast.warning("Removed, but some reference files stayed in storage.");
+      else toast.success("Removed");
       if (draft.id === id) setDraft(emptyDraft(draft.kind));
       queryClient.invalidateQueries({ queryKey: ["cast"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not remove"),
   });
 
-  async function onFiles(files: FileList | null) {
+  /** Stages files in browser state — nothing is uploaded until the character is saved. */
+  function onFiles(files: FileList | null) {
     if (!files?.length) return;
-    if (draft.reference_images.length + files.length > 8) {
+    const total = draft.reference_images.length + draft.staged.length + files.length;
+    if (total > 8) {
       toast.error("Up to 8 reference images per character.");
+      if (fileInput.current) fileInput.current.value = "";
       return;
     }
-    setUploading(true);
-    try {
-      const added: CharacterReferenceImage[] = [];
-      for (const file of Array.from(files)) {
-        const path = await uploadCharacterReference(file, draft.id ?? "draft");
-        added.push({ path, label: file.name.slice(0, 60) });
+    const added: Staged[] = [];
+    for (const file of Array.from(files)) {
+      const invalid = validateReferenceFile(file);
+      if (invalid) {
+        toast.error(`${file.name}: ${invalid}`);
+        continue;
       }
-      setDraft((d) => {
-        const refs = [...d.reference_images, ...added];
-        return { ...d, reference_images: refs, primary_reference_path: d.primary_reference_path ?? refs[0]?.path ?? null };
-      });
-      toast.success(added.length === 1 ? "Reference added" : `${added.length} references added`);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Upload failed");
-    } finally {
-      setUploading(false);
-      if (fileInput.current) fileInput.current.value = "";
+      const url = URL.createObjectURL(file);
+      objectUrls.current.add(url);
+      added.push({ key: `staged:${crypto.randomUUID()}`, file, label: file.name.slice(0, 60), url });
     }
+    if (added.length) {
+      setDraft((d) => ({
+        ...d,
+        staged: [...d.staged, ...added],
+        primary_reference_path:
+          d.primary_reference_path ?? d.reference_images[0]?.path ?? added[0]?.key ?? null,
+      }));
+    }
+    if (fileInput.current) fileInput.current.value = "";
   }
 
-  async function removeRef(path: string) {
+  /** Drops a saved reference from the draft; storage deletion happens after save. */
+  function removeRef(path: string) {
     setDraft((d) => {
       const refs = d.reference_images.filter((r) => r.path !== path);
       return {
         ...d,
         reference_images: refs,
-        primary_reference_path: d.primary_reference_path === path ? refs[0]?.path ?? null : d.primary_reference_path,
+        removed: [...d.removed, path],
+        primary_reference_path:
+          d.primary_reference_path === path ? (refs[0]?.path ?? d.staged[0]?.key ?? null) : d.primary_reference_path,
       };
     });
-    try {
-      await delRefFn({ data: { path } });
-    } catch {
-      /* file may already be gone; the record no longer points at it */
-    }
+  }
+
+  /** Drops a staged (not yet uploaded) file and frees its preview URL. */
+  function removeStaged(key: string) {
+    setDraft((d) => {
+      const target = d.staged.find((s) => s.key === key);
+      if (target) releaseStaged([target]);
+      const staged = d.staged.filter((s) => s.key !== key);
+      return {
+        ...d,
+        staged,
+        primary_reference_path:
+          d.primary_reference_path === key
+            ? (d.reference_images[0]?.path ?? staged[0]?.key ?? null)
+            : d.primary_reference_path,
+      };
+    });
   }
 
   const isCharacter = draft.kind === "character";
-  const canSave = draft.name.trim().length >= 2 && draft.rights_confirmed && !save.isPending && !uploading;
+  const canSave = draft.name.trim().length >= 2 && draft.rights_confirmed && !busy;
+
 
   return (
     <AppShell>
