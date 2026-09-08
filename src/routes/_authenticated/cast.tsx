@@ -52,12 +52,19 @@ export const Route = createFileRoute("/_authenticated/cast")({
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+/** A file chosen in the editor but not yet uploaded (new characters stage first). */
+type Staged = { key: string; file: File; label: string; url: string };
+
 type Draft = {
   id?: string;
   kind: "character" | "voice";
   name: string;
   description: string;
   reference_images: CharacterReferenceImage[];
+  /** Files awaiting upload; uploaded only after the character row exists. */
+  staged: Staged[];
+  /** Existing storage paths to delete once the record update succeeds. */
+  removed: string[];
   primary_reference_path: string | null;
   reference_url: string;
   appearance: CharacterAppearance;
@@ -76,6 +83,8 @@ const emptyDraft = (kind: "character" | "voice"): Draft => ({
   name: "",
   description: "",
   reference_images: [],
+  staged: [],
+  removed: [],
   primary_reference_path: null,
   reference_url: "",
   appearance: { ...EMPTY_APPEARANCE },
@@ -96,6 +105,8 @@ function fromRow(row: any): Draft {
     name: row.name ?? "",
     description: row.description ?? "",
     reference_images: (row.reference_images ?? []) as CharacterReferenceImage[],
+    staged: [],
+    removed: [],
     primary_reference_path: row.primary_reference_path ?? null,
     reference_url: row.reference_url ?? "",
     appearance: { ...EMPTY_APPEARANCE, ...((row.appearance_json ?? {}) as Partial<CharacterAppearance>) },
@@ -109,6 +120,7 @@ function fromRow(row: any): Draft {
     consent_scope: row.consent_scope ?? "",
   };
 }
+
 
 function CharacterStudio() {
   const queryClient = useQueryClient();
