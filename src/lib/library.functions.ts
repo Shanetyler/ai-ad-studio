@@ -327,7 +327,7 @@ export const deleteCastReference = createServerFn({ method: "POST" })
     if (readErr) throw new Error(readErr.message);
     if (!row) throw new Error("Character not found.");
 
-    const refs = ((row.reference_images ?? []) as { path: string }[]) ?? [];
+    const refs = (row.reference_images ?? []) as { path: string }[];
     const belongsToCharacter =
       refs.some((r) => r.path === data.path) ||
       row.primary_reference_path === data.path ||

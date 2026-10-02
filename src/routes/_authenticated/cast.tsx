@@ -18,6 +18,7 @@ import {
   getCastCapabilities,
   getCastReferenceUrls,
   listCast,
+  revokeCastConsent,
   saveCast,
   updateCastReferences,
 } from "@/lib/library.functions";
@@ -128,6 +129,7 @@ function CharacterStudio() {
   const saveFn = useServerFn(saveCast);
   const delFn = useServerFn(deleteCast);
   const updRefsFn = useServerFn(updateCastReferences);
+  const revokeFn = useServerFn(revokeCastConsent);
   const signFn = useServerFn(getCastReferenceUrls);
   const capsFn = useServerFn(getCastCapabilities);
 
@@ -189,6 +191,20 @@ function CharacterStudio() {
    * failures are reported and the character stays editable.
    */
   async function handleSave() {
+    if (draft.id && !draft.rights_confirmed) {
+      // Existing character with rights unchecked: use the dedicated revoke path.
+      setBusy("Revoking rights…");
+      try {
+        await revokeFn({ data: { id: draft.id } });
+        queryClient.invalidateQueries({ queryKey: ["cast"] });
+        toast.success("Rights confirmation revoked. This character won't be used for generation.");
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Could not revoke rights");
+      } finally {
+        setBusy(null);
+      }
+      return;
+    }
     const keptRefs = draft.reference_images.map((r) => ({ path: r.path, ...(r.label ? { label: r.label } : {}) }));
     const primaryIsPath = draft.primary_reference_path && keptRefs.some((r) => r.path === draft.primary_reference_path);
     setBusy("Saving character…");
@@ -373,7 +389,7 @@ function CharacterStudio() {
   }
 
   const isCharacter = draft.kind === "character";
-  const canSave = draft.name.trim().length >= 2 && draft.rights_confirmed && !busy;
+  const canSave = draft.name.trim().length >= 2 && (draft.rights_confirmed || !!draft.id) && !busy;
 
 
   return (
@@ -451,10 +467,10 @@ function CharacterStudio() {
                     type="button"
                     size="sm"
                     variant="outline"
-                    disabled={uploading}
+                    disabled={!!busy}
                     onClick={() => fileInput.current?.click()}
                   >
-                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+                    <ImagePlus className="h-4 w-4" />
                     Add
                   </Button>
                   <input
@@ -467,36 +483,51 @@ function CharacterStudio() {
                   />
                 </div>
 
-                {draft.reference_images.length === 0 ? (
+                {draft.reference_images.length === 0 && draft.staged.length === 0 ? (
                   <p className="text-xs text-muted-foreground">
                     No references yet. PNG, JPG or WEBP up to 8 MB each, 8 images max.
                   </p>
                 ) : (
                   <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                    {draft.reference_images.map((r) => {
-                      const primary = draft.primary_reference_path === r.path;
+                    {[
+                      ...draft.reference_images.map((r) => ({
+                        key: r.path,
+                        src: signed[r.path] as string | undefined,
+                        label: r.label,
+                        pending: false,
+                      })),
+                      ...draft.staged.map((s) => ({ key: s.key, src: s.url, label: s.label, pending: true })),
+                    ].map((item) => {
+                      const primary = draft.primary_reference_path === item.key;
                       return (
                         <li
-                          key={r.path}
+                          key={item.key}
                           className={`group relative overflow-hidden rounded-lg border ${primary ? "border-primary ring-2 ring-primary/30" : "border-border/60"}`}
                         >
-                          {signed[r.path] ? (
-                            <img src={signed[r.path]} alt={r.label || "Character reference"} className="aspect-square w-full object-cover" />
+                          {item.src ? (
+                            <img src={item.src} alt={item.label || "Character reference"} className="aspect-square w-full object-cover" />
                           ) : (
                             <Skeleton className="aspect-square w-full" />
                           )}
+                          {item.pending && (
+                            <span className="absolute bottom-1 left-1 rounded bg-background/85 px-1.5 py-0.5 text-[10px] font-medium">
+                              Not uploaded
+                            </span>
+                          )}
                           <button
                             type="button"
+                            disabled={!!busy}
                             aria-label={primary ? "Primary reference" : "Set as primary reference"}
-                            onClick={() => set("primary_reference_path", r.path)}
+                            onClick={() => set("primary_reference_path", item.key)}
                             className="absolute left-1 top-1 grid h-6 w-6 place-items-center rounded-md bg-background/85"
                           >
                             <Star className={`h-3.5 w-3.5 ${primary ? "fill-primary text-primary" : "text-muted-foreground"}`} />
                           </button>
                           <button
                             type="button"
+                            disabled={!!busy}
                             aria-label="Remove reference"
-                            onClick={() => removeRef(r.path)}
+                            onClick={() => (item.pending ? removeStaged(item.key) : removeRef(item.key))}
                             className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-md bg-background/85"
                           >
                             <X className="h-3.5 w-3.5" />
@@ -505,6 +536,11 @@ function CharacterStudio() {
                       );
                     })}
                   </ul>
+                )}
+                {draft.removed.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {draft.removed.length} reference{draft.removed.length > 1 ? "s" : ""} will be deleted when you save.
+                  </p>
                 )}
 
                 <div className="space-y-1.5">
@@ -588,7 +624,7 @@ function CharacterStudio() {
             </div>
             {caps?.voice.configured ? (
               <div className="grid gap-3 sm:grid-cols-2">
-                <AppField id="v-prov" label="Voice provider" value={draft.voice_provider} placeholder={caps.voice.id ?? "elevenlabs"}
+                <AppField id="v-prov" label="Voice provider" value={draft.voice_provider} placeholder="elevenlabs"
                   onChange={(v) => set("voice_provider", v)} />
                 <AppField id="v-ref" label="Provider voice ID" value={draft.voice_provider_ref} placeholder="21m00Tcm4TlvDq8ikWAM"
                   onChange={(v) => set("voice_provider_ref", v)} />
@@ -621,11 +657,23 @@ function CharacterStudio() {
                 for generation once this is confirmed.
               </span>
             </label>
+            {draft.id && !draft.rights_confirmed && (
+              <p className="rounded-lg bg-secondary/60 p-2 text-xs text-muted-foreground">
+                Saving now revokes the rights confirmation. Other edits are not saved until rights are confirmed again,
+                and this character can't be used for generation.
+              </p>
+            )}
           </section>
 
-          <Button className="w-full" variant="hero" disabled={!canSave} onClick={() => save.mutate()}>
-            {save.isPending ? <Loader2 className="animate-spin" /> : null}
-            {draft.id ? "Save changes" : isCharacter ? "Save character" : "Save voice"}
+          <Button className="w-full" variant="hero" disabled={!canSave} onClick={() => void handleSave()}>
+            {busy ? <Loader2 className="animate-spin" /> : null}
+            {busy ?? (draft.id && !draft.rights_confirmed
+              ? "Revoke rights"
+              : draft.id
+                ? "Save changes"
+                : isCharacter
+                  ? "Save character"
+                  : "Save voice")}
           </Button>
         </div>
 
