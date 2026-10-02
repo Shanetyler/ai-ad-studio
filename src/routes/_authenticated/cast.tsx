@@ -32,7 +32,6 @@ import {
   type CharacterVoice,
 } from "@/lib/character";
 
-
 export const Route = createFileRoute("/_authenticated/cast")({
   head: () => ({
     meta: [
@@ -43,7 +42,10 @@ export const Route = createFileRoute("/_authenticated/cast")({
           "Build reusable on-camera characters and voice profiles with reference images, appearance guidance, and rights confirmation.",
       },
       { property: "og:title", content: "Character Studio — EASY ADs" },
-      { property: "og:description", content: "Reusable characters and voice direction for every ad you make." },
+      {
+        property: "og:description",
+        content: "Reusable characters and voice direction for every ad you make.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -110,7 +112,10 @@ function fromRow(row: any): Draft {
     removed: [],
     primary_reference_path: row.primary_reference_path ?? null,
     reference_url: row.reference_url ?? "",
-    appearance: { ...EMPTY_APPEARANCE, ...((row.appearance_json ?? {}) as Partial<CharacterAppearance>) },
+    appearance: {
+      ...EMPTY_APPEARANCE,
+      ...((row.appearance_json ?? {}) as Partial<CharacterAppearance>),
+    },
     appearance_prompt: row.appearance_prompt ?? "",
     voice: { ...EMPTY_VOICE, ...((row.voice_json ?? {}) as Partial<CharacterVoice>) },
     voice_provider: row.voice_provider ?? "",
@@ -121,7 +126,6 @@ function fromRow(row: any): Draft {
     consent_scope: row.consent_scope ?? "",
   };
 }
-
 
 function CharacterStudio() {
   const queryClient = useQueryClient();
@@ -149,16 +153,27 @@ function CharacterStudio() {
     [],
   );
 
-  const { data: cast, isLoading, isError, error } = useQuery({
+  const {
+    data: cast,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
     queryKey: ["cast"],
     queryFn: () => listFn(),
     retry: false,
   });
-  const { data: caps } = useQuery({ queryKey: ["cast-caps"], queryFn: () => capsFn(), retry: false });
+  const { data: caps } = useQuery({
+    queryKey: ["cast-caps"],
+    queryFn: () => capsFn(),
+    retry: false,
+  });
 
   const allPaths = useMemo(() => {
     const paths = new Set<string>();
-    (cast ?? []).forEach((c: any) => (c.reference_images ?? []).forEach((r: any) => r?.path && paths.add(r.path)));
+    (cast ?? []).forEach((c: any) =>
+      (c.reference_images ?? []).forEach((r: any) => r?.path && paths.add(r.path)),
+    );
     draft.reference_images.forEach((r) => paths.add(r.path));
     return Array.from(paths);
   }, [cast, draft.reference_images]);
@@ -174,7 +189,9 @@ function CharacterStudio() {
   }, [allPaths.join("|")]);
 
   const previewPrompt = useMemo(
-    () => draft.appearance_prompt || buildAppearancePrompt(draft.name, draft.description, draft.appearance),
+    () =>
+      draft.appearance_prompt ||
+      buildAppearancePrompt(draft.name, draft.description, draft.appearance),
     [draft.appearance_prompt, draft.name, draft.description, draft.appearance],
   );
 
@@ -205,8 +222,12 @@ function CharacterStudio() {
       }
       return;
     }
-    const keptRefs = draft.reference_images.map((r) => ({ path: r.path, ...(r.label ? { label: r.label } : {}) }));
-    const primaryIsPath = draft.primary_reference_path && keptRefs.some((r) => r.path === draft.primary_reference_path);
+    const keptRefs = draft.reference_images.map((r) => ({
+      path: r.path,
+      ...(r.label ? { label: r.label } : {}),
+    }));
+    const primaryIsPath =
+      draft.primary_reference_path && keptRefs.some((r) => r.path === draft.primary_reference_path);
     setBusy("Saving character…");
     try {
       const res = await saveFn({
@@ -266,7 +287,10 @@ function CharacterStudio() {
           const out = await updRefsFn({
             data: {
               id,
-              reference_images: all.map((r) => ({ path: r.path, ...(r.label ? { label: r.label } : {}) })),
+              reference_images: all.map((r) => ({
+                path: r.path,
+                ...(r.label ? { label: r.label } : {}),
+              })),
               primary_reference_path: primary,
               delete_paths: draft.removed,
             },
@@ -297,15 +321,25 @@ function CharacterStudio() {
         setDraft((d) => ({
           ...d,
           id,
-          reference_images: [...d.reference_images, ...uploaded.map(({ path, label }) => ({ path, label }))],
+          reference_images: [
+            ...d.reference_images,
+            ...uploaded.map(({ path, label }) => ({ path, label })),
+          ],
           staged: failedStaged,
           removed: [],
         }));
         return;
       }
 
-      if (cleanupFailed) toast.warning("Saved. Some old reference files could not be deleted from storage.");
-      toast.success(draft.id ? "Character updated" : draft.kind === "character" ? "Character saved" : "Voice saved");
+      if (cleanupFailed)
+        toast.warning("Saved. Some old reference files could not be deleted from storage.");
+      toast.success(
+        draft.id
+          ? "Character updated"
+          : draft.kind === "character"
+            ? "Character saved"
+            : "Voice saved",
+      );
       releaseStaged(draft.staged.filter((s) => !uploadedStaged.includes(s)));
       setDraft(emptyDraft(draft.kind));
     } catch (e) {
@@ -318,7 +352,8 @@ function CharacterStudio() {
   const remove = useMutation({
     mutationFn: (id: string) => delFn({ data: { id } }),
     onSuccess: (res: any, id) => {
-      if (res?.storage_cleanup_failed) toast.warning("Removed, but some reference files stayed in storage.");
+      if (res?.storage_cleanup_failed)
+        toast.warning("Removed, but some reference files stayed in storage.");
       else toast.success("Removed");
       if (draft.id === id) setDraft(emptyDraft(draft.kind));
       queryClient.invalidateQueries({ queryKey: ["cast"] });
@@ -344,7 +379,12 @@ function CharacterStudio() {
       }
       const url = URL.createObjectURL(file);
       objectUrls.current.add(url);
-      added.push({ key: `staged:${crypto.randomUUID()}`, file, label: file.name.slice(0, 60), url });
+      added.push({
+        key: `staged:${crypto.randomUUID()}`,
+        file,
+        label: file.name.slice(0, 60),
+        url,
+      });
     }
     if (added.length) {
       setDraft((d) => ({
@@ -366,7 +406,9 @@ function CharacterStudio() {
         reference_images: refs,
         removed: [...d.removed, path],
         primary_reference_path:
-          d.primary_reference_path === path ? (refs[0]?.path ?? d.staged[0]?.key ?? null) : d.primary_reference_path,
+          d.primary_reference_path === path
+            ? (refs[0]?.path ?? d.staged[0]?.key ?? null)
+            : d.primary_reference_path,
       };
     });
   }
@@ -391,15 +433,15 @@ function CharacterStudio() {
   const isCharacter = draft.kind === "character";
   const canSave = draft.name.trim().length >= 2 && (draft.rights_confirmed || !!draft.id) && !busy;
 
-
   return (
     <AppShell>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-4xl">Character Studio</h1>
           <p className="mt-1 max-w-2xl text-muted-foreground">
-            Build a character once and reuse it across every ad. Reference images, appearance guidance and voice direction
-            steer generation for a consistent look — they are guidance, not a face or voice clone.
+            Build a character once and reuse it across every ad. Reference images, appearance
+            guidance and voice direction steer generation for a consistent look — they are guidance,
+            not a face or voice clone.
           </p>
         </div>
         {draft.id && (
@@ -417,8 +459,12 @@ function CharacterStudio() {
             onValueChange={(v) => setDraft((d) => ({ ...d, kind: v as "character" | "voice" }))}
           >
             <TabsList className="w-full">
-              <TabsTrigger value="character" className="flex-1">Reusable character</TabsTrigger>
-              <TabsTrigger value="voice" className="flex-1">Voice profile</TabsTrigger>
+              <TabsTrigger value="character" className="flex-1">
+                Reusable character
+              </TabsTrigger>
+              <TabsTrigger value="voice" className="flex-1">
+                Voice profile
+              </TabsTrigger>
             </TabsList>
           </Tabs>
           <p className="text-xs text-muted-foreground">
@@ -496,7 +542,12 @@ function CharacterStudio() {
                         label: r.label,
                         pending: false,
                       })),
-                      ...draft.staged.map((s) => ({ key: s.key, src: s.url, label: s.label, pending: true })),
+                      ...draft.staged.map((s) => ({
+                        key: s.key,
+                        src: s.url,
+                        label: s.label,
+                        pending: true,
+                      })),
                     ].map((item) => {
                       const primary = draft.primary_reference_path === item.key;
                       return (
@@ -505,7 +556,11 @@ function CharacterStudio() {
                           className={`group relative overflow-hidden rounded-lg border ${primary ? "border-primary ring-2 ring-primary/30" : "border-border/60"}`}
                         >
                           {item.src ? (
-                            <img src={item.src} alt={item.label || "Character reference"} className="aspect-square w-full object-cover" />
+                            <img
+                              src={item.src}
+                              alt={item.label || "Character reference"}
+                              className="aspect-square w-full object-cover"
+                            />
                           ) : (
                             <Skeleton className="aspect-square w-full" />
                           )}
@@ -521,13 +576,17 @@ function CharacterStudio() {
                             onClick={() => set("primary_reference_path", item.key)}
                             className="absolute left-1 top-1 grid h-6 w-6 place-items-center rounded-md bg-background/85"
                           >
-                            <Star className={`h-3.5 w-3.5 ${primary ? "fill-primary text-primary" : "text-muted-foreground"}`} />
+                            <Star
+                              className={`h-3.5 w-3.5 ${primary ? "fill-primary text-primary" : "text-muted-foreground"}`}
+                            />
                           </button>
                           <button
                             type="button"
                             disabled={!!busy}
                             aria-label="Remove reference"
-                            onClick={() => (item.pending ? removeStaged(item.key) : removeRef(item.key))}
+                            onClick={() =>
+                              item.pending ? removeStaged(item.key) : removeRef(item.key)
+                            }
                             className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-md bg-background/85"
                           >
                             <X className="h-3.5 w-3.5" />
@@ -539,12 +598,15 @@ function CharacterStudio() {
                 )}
                 {draft.removed.length > 0 && (
                   <p className="text-xs text-muted-foreground">
-                    {draft.removed.length} reference{draft.removed.length > 1 ? "s" : ""} will be deleted when you save.
+                    {draft.removed.length} reference{draft.removed.length > 1 ? "s" : ""} will be
+                    deleted when you save.
                   </p>
                 )}
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="ch-refurl" className="text-xs">Reference link (optional)</Label>
+                  <Label htmlFor="ch-refurl" className="text-xs">
+                    Reference link (optional)
+                  </Label>
                   <Input
                     id="ch-refurl"
                     value={draft.reference_url}
@@ -559,33 +621,88 @@ function CharacterStudio() {
                 <div>
                   <h2 className="text-sm font-medium">Appearance</h2>
                   <p className="text-xs text-muted-foreground">
-                    These details are written into every prompt for this character so the look stays consistent.
+                    These details are written into every prompt for this character so the look stays
+                    consistent.
                   </p>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <AppField id="age" label="Age range" value={draft.appearance.age_range} placeholder="40s"
-                    onChange={(v) => set("appearance", { ...draft.appearance, age_range: v })} />
-                  <AppField id="gender" label="Presentation" value={draft.appearance.gender_presentation} placeholder="Male"
-                    onChange={(v) => set("appearance", { ...draft.appearance, gender_presentation: v })} />
-                  <AppField id="eth" label="Ethnicity / look" value={draft.appearance.ethnicity} placeholder="Caucasian"
-                    onChange={(v) => set("appearance", { ...draft.appearance, ethnicity: v })} />
-                  <AppField id="hair" label="Hair" value={draft.appearance.hair} placeholder="Short dark brown"
-                    onChange={(v) => set("appearance", { ...draft.appearance, hair: v })} />
-                  <AppField id="fhair" label="Facial hair" value={draft.appearance.facial_hair} placeholder="Light stubble"
-                    onChange={(v) => set("appearance", { ...draft.appearance, facial_hair: v })} />
-                  <AppField id="ward" label="Wardrobe" value={draft.appearance.wardrobe} placeholder="Navy work shirt"
-                    onChange={(v) => set("appearance", { ...draft.appearance, wardrobe: v })} />
-                  <AppField id="dist" label="Distinguishing" value={draft.appearance.distinguishing} placeholder="Warm, easy smile"
-                    onChange={(v) => set("appearance", { ...draft.appearance, distinguishing: v })} />
-                  <AppField id="setting" label="Usual setting" value={draft.appearance.setting} placeholder="Suburban front lawn"
-                    onChange={(v) => set("appearance", { ...draft.appearance, setting: v })} />
-                  <AppField id="framing" label="Framing" value={draft.appearance.framing} placeholder="Medium close-up"
-                    onChange={(v) => set("appearance", { ...draft.appearance, framing: v })} />
-                  <AppField id="seed" label="Locked seed (optional)" value={draft.seed} placeholder="123456"
-                    onChange={(v) => set("seed", v.replace(/[^0-9]/g, "").slice(0, 9))} />
+                  <AppField
+                    id="age"
+                    label="Age range"
+                    value={draft.appearance.age_range}
+                    placeholder="40s"
+                    onChange={(v) => set("appearance", { ...draft.appearance, age_range: v })}
+                  />
+                  <AppField
+                    id="gender"
+                    label="Presentation"
+                    value={draft.appearance.gender_presentation}
+                    placeholder="Male"
+                    onChange={(v) =>
+                      set("appearance", { ...draft.appearance, gender_presentation: v })
+                    }
+                  />
+                  <AppField
+                    id="eth"
+                    label="Ethnicity / look"
+                    value={draft.appearance.ethnicity}
+                    placeholder="Caucasian"
+                    onChange={(v) => set("appearance", { ...draft.appearance, ethnicity: v })}
+                  />
+                  <AppField
+                    id="hair"
+                    label="Hair"
+                    value={draft.appearance.hair}
+                    placeholder="Short dark brown"
+                    onChange={(v) => set("appearance", { ...draft.appearance, hair: v })}
+                  />
+                  <AppField
+                    id="fhair"
+                    label="Facial hair"
+                    value={draft.appearance.facial_hair}
+                    placeholder="Light stubble"
+                    onChange={(v) => set("appearance", { ...draft.appearance, facial_hair: v })}
+                  />
+                  <AppField
+                    id="ward"
+                    label="Wardrobe"
+                    value={draft.appearance.wardrobe}
+                    placeholder="Navy work shirt"
+                    onChange={(v) => set("appearance", { ...draft.appearance, wardrobe: v })}
+                  />
+                  <AppField
+                    id="dist"
+                    label="Distinguishing"
+                    value={draft.appearance.distinguishing}
+                    placeholder="Warm, easy smile"
+                    onChange={(v) => set("appearance", { ...draft.appearance, distinguishing: v })}
+                  />
+                  <AppField
+                    id="setting"
+                    label="Usual setting"
+                    value={draft.appearance.setting}
+                    placeholder="Suburban front lawn"
+                    onChange={(v) => set("appearance", { ...draft.appearance, setting: v })}
+                  />
+                  <AppField
+                    id="framing"
+                    label="Framing"
+                    value={draft.appearance.framing}
+                    placeholder="Medium close-up"
+                    onChange={(v) => set("appearance", { ...draft.appearance, framing: v })}
+                  />
+                  <AppField
+                    id="seed"
+                    label="Locked seed (optional)"
+                    value={draft.seed}
+                    placeholder="123456"
+                    onChange={(v) => set("seed", v.replace(/[^0-9]/g, "").slice(0, 9))}
+                  />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="ch-prompt" className="text-xs">Reusable appearance prompt</Label>
+                  <Label htmlFor="ch-prompt" className="text-xs">
+                    Reusable appearance prompt
+                  </Label>
                   <Textarea
                     id="ch-prompt"
                     rows={3}
@@ -606,33 +723,65 @@ function CharacterStudio() {
             <div className="flex items-start justify-between gap-2">
               <div>
                 <h2 className="text-sm font-medium">Voice</h2>
-                <p className="text-xs text-muted-foreground">Direction for narration. No voice cloning is performed.</p>
+                <p className="text-xs text-muted-foreground">
+                  Direction for narration. No voice cloning is performed.
+                </p>
               </div>
               <Badge variant={caps?.voice.configured ? "secondary" : "outline"}>
                 {caps?.voice.configured ? "Narration available" : "Narration not configured"}
               </Badge>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <AppField id="v-style" label="Style" value={draft.voice.style} placeholder="Warm, confident"
-                onChange={(v) => set("voice", { ...draft.voice, style: v })} />
-              <AppField id="v-pace" label="Pace" value={draft.voice.pace} placeholder="Conversational"
-                onChange={(v) => set("voice", { ...draft.voice, pace: v })} />
-              <AppField id="v-accent" label="Accent" value={draft.voice.accent} placeholder="Neutral US"
-                onChange={(v) => set("voice", { ...draft.voice, accent: v })} />
-              <AppField id="v-dir" label="Delivery notes" value={draft.voice.direction} placeholder="Smile through the CTA"
-                onChange={(v) => set("voice", { ...draft.voice, direction: v })} />
+              <AppField
+                id="v-style"
+                label="Style"
+                value={draft.voice.style}
+                placeholder="Warm, confident"
+                onChange={(v) => set("voice", { ...draft.voice, style: v })}
+              />
+              <AppField
+                id="v-pace"
+                label="Pace"
+                value={draft.voice.pace}
+                placeholder="Conversational"
+                onChange={(v) => set("voice", { ...draft.voice, pace: v })}
+              />
+              <AppField
+                id="v-accent"
+                label="Accent"
+                value={draft.voice.accent}
+                placeholder="Neutral US"
+                onChange={(v) => set("voice", { ...draft.voice, accent: v })}
+              />
+              <AppField
+                id="v-dir"
+                label="Delivery notes"
+                value={draft.voice.direction}
+                placeholder="Smile through the CTA"
+                onChange={(v) => set("voice", { ...draft.voice, direction: v })}
+              />
             </div>
             {caps?.voice.configured ? (
               <div className="grid gap-3 sm:grid-cols-2">
-                <AppField id="v-prov" label="Voice provider" value={draft.voice_provider} placeholder="elevenlabs"
-                  onChange={(v) => set("voice_provider", v)} />
-                <AppField id="v-ref" label="Provider voice ID" value={draft.voice_provider_ref} placeholder="21m00Tcm4TlvDq8ikWAM"
-                  onChange={(v) => set("voice_provider_ref", v)} />
+                <AppField
+                  id="v-prov"
+                  label="Voice provider"
+                  value={draft.voice_provider}
+                  placeholder="elevenlabs"
+                  onChange={(v) => set("voice_provider", v)}
+                />
+                <AppField
+                  id="v-ref"
+                  label="Provider voice ID"
+                  value={draft.voice_provider_ref}
+                  placeholder="21m00Tcm4TlvDq8ikWAM"
+                  onChange={(v) => set("voice_provider_ref", v)}
+                />
               </div>
             ) : (
               <p className="rounded-lg bg-secondary/60 p-2 text-xs text-muted-foreground">
-                No narration provider is connected yet, so provider voice IDs are hidden. Ads render with captions and a
-                music bed until one is configured.
+                No narration provider is connected yet, so provider voice IDs are hidden. Ads render
+                with captions and a music bed until one is configured.
               </p>
             )}
           </section>
@@ -641,10 +790,20 @@ function CharacterStudio() {
           <section className="space-y-3 rounded-xl border border-border/60 p-3">
             <h2 className="text-sm font-medium">Rights &amp; consent</h2>
             <div className="grid gap-3 sm:grid-cols-2">
-              <AppField id="c-by" label="Confirmed by" value={draft.consent_by} placeholder="Your name"
-                onChange={(v) => set("consent_by", v)} />
-              <AppField id="c-scope" label="Permitted use" value={draft.consent_scope} placeholder="Paid social ads, 12 months"
-                onChange={(v) => set("consent_scope", v)} />
+              <AppField
+                id="c-by"
+                label="Confirmed by"
+                value={draft.consent_by}
+                placeholder="Your name"
+                onChange={(v) => set("consent_by", v)}
+              />
+              <AppField
+                id="c-scope"
+                label="Permitted use"
+                value={draft.consent_scope}
+                placeholder="Paid social ads, 12 months"
+                onChange={(v) => set("consent_scope", v)}
+              />
             </div>
             <label className="flex items-start gap-3 rounded-lg border border-border/60 bg-card/40 p-3 text-sm">
               <Checkbox
@@ -653,27 +812,33 @@ function CharacterStudio() {
                 className="mt-0.5"
               />
               <span className="text-muted-foreground">
-                I own or have written permission to use this likeness and/or voice in advertising. References are only used
-                for generation once this is confirmed.
+                I own or have written permission to use this likeness and/or voice in advertising.
+                References are only used for generation once this is confirmed.
               </span>
             </label>
             {draft.id && !draft.rights_confirmed && (
               <p className="rounded-lg bg-secondary/60 p-2 text-xs text-muted-foreground">
-                Saving now revokes the rights confirmation. Other edits are not saved until rights are confirmed again,
-                and this character can't be used for generation.
+                Saving now revokes the rights confirmation. Other edits are not saved until rights
+                are confirmed again, and this character can't be used for generation.
               </p>
             )}
           </section>
 
-          <Button className="w-full" variant="hero" disabled={!canSave} onClick={() => void handleSave()}>
+          <Button
+            className="w-full"
+            variant="hero"
+            disabled={!canSave}
+            onClick={() => void handleSave()}
+          >
             {busy ? <Loader2 className="animate-spin" /> : null}
-            {busy ?? (draft.id && !draft.rights_confirmed
-              ? "Revoke rights"
-              : draft.id
-                ? "Save changes"
-                : isCharacter
-                  ? "Save character"
-                  : "Save voice")}
+            {busy ??
+              (draft.id && !draft.rights_confirmed
+                ? "Revoke rights"
+                : draft.id
+                  ? "Save changes"
+                  : isCharacter
+                    ? "Save character"
+                    : "Save voice")}
           </Button>
         </div>
 
@@ -702,13 +867,21 @@ function CharacterStudio() {
 
           {cast?.map((member: any) => {
             const refs = (member.reference_images ?? []) as CharacterReferenceImage[];
-            const primaryPath = member.primary_reference_path ?? refs.find((r) => r.primary)?.path ?? refs[0]?.path;
+            const primaryPath =
+              member.primary_reference_path ?? refs.find((r) => r.primary)?.path ?? refs[0]?.path;
             const thumb = primaryPath ? signed[primaryPath] : member.reference_url || undefined;
             return (
-              <article key={member.id} className="panel flex flex-col gap-4 p-5 sm:flex-row sm:items-start">
+              <article
+                key={member.id}
+                className="panel flex flex-col gap-4 p-5 sm:flex-row sm:items-start"
+              >
                 <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-border/60 bg-secondary">
                   {thumb ? (
-                    <img src={thumb} alt={`${member.name} reference`} className="h-full w-full object-cover" />
+                    <img
+                      src={thumb}
+                      alt={`${member.name} reference`}
+                      className="h-full w-full object-cover"
+                    />
                   ) : (
                     <div className="grid h-full w-full place-items-center">
                       <UserRound className="h-6 w-6 text-muted-foreground" />
@@ -718,18 +891,30 @@ function CharacterStudio() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="font-display text-lg">{member.name}</h3>
-                    <Badge variant="secondary">{member.kind === "voice" ? "Voice profile" : "Reusable character"}</Badge>
+                    <Badge variant="secondary">
+                      {member.kind === "voice" ? "Voice profile" : "Reusable character"}
+                    </Badge>
                     {member.rights_confirmed ? (
                       <Badge variant="outline">Rights confirmed</Badge>
                     ) : (
                       <Badge variant="destructive">Rights needed</Badge>
                     )}
-                    {refs.length > 0 && <Badge variant="outline">{refs.length} reference{refs.length > 1 ? "s" : ""}</Badge>}
-                    {member.generation_seed != null && <Badge variant="outline">Seed {member.generation_seed}</Badge>}
+                    {refs.length > 0 && (
+                      <Badge variant="outline">
+                        {refs.length} reference{refs.length > 1 ? "s" : ""}
+                      </Badge>
+                    )}
+                    {member.generation_seed != null && (
+                      <Badge variant="outline">Seed {member.generation_seed}</Badge>
+                    )}
                   </div>
-                  <p className="mt-1 text-sm text-muted-foreground">{member.description || "No description"}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {member.description || "No description"}
+                  </p>
                   {member.appearance_prompt && (
-                    <p className="mt-2 line-clamp-2 text-xs text-muted-foreground/80">{member.appearance_prompt}</p>
+                    <p className="mt-2 line-clamp-2 text-xs text-muted-foreground/80">
+                      {member.appearance_prompt}
+                    </p>
                   )}
                   {member.consent_by && (
                     <p className="mt-2 text-xs text-muted-foreground">
@@ -742,7 +927,12 @@ function CharacterStudio() {
                   <Button size="sm" variant="outline" onClick={() => setDraft(fromRow(member))}>
                     <Pencil className="h-4 w-4" /> Edit
                   </Button>
-                  <Button size="sm" variant="ghost" aria-label={`Remove ${member.name}`} onClick={() => remove.mutate(member.id)}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    aria-label={`Remove ${member.name}`}
+                    onClick={() => remove.mutate(member.id)}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -770,8 +960,15 @@ function AppField({
 }) {
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={id} className="text-xs">{label}</Label>
-      <Input id={id} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
+      <Label htmlFor={id} className="text-xs">
+        {label}
+      </Label>
+      <Input
+        id={id}
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+      />
     </div>
   );
 }
