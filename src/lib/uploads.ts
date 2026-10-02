@@ -7,7 +7,8 @@ export async function uploadAdImage(file: File, folder: "logos" | "scenes"): Pro
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth.user?.id;
   if (!uid) throw new Error("You must be signed in to upload files.");
-  if (!file.type.startsWith("image/")) throw new Error("Please choose an image file (PNG, JPG, WEBP).");
+  if (!file.type.startsWith("image/"))
+    throw new Error("Please choose an image file (PNG, JPG, WEBP).");
   if (file.size > 8 * 1024 * 1024) throw new Error("Images must be smaller than 8 MB.");
 
   const ext = (file.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -82,4 +83,3 @@ export async function uploadCharacterReference(file: File, characterId: string):
   if (error) throw new Error(error.message);
   return path;
 }
-

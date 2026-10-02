@@ -78,24 +78,30 @@ export const listCast = createServerFn({ method: "GET" })
  * before the row's reference list is persisted.
  */
 async function ownedReferencePaths(supabase: any, userId: string) {
-  const { data, error } = await supabase.from("cast_members").select("id, reference_images, primary_reference_path");
+  const { data, error } = await supabase
+    .from("cast_members")
+    .select("id, reference_images, primary_reference_path");
   if (error) throw new Error(error.message);
   const recorded = new Set<string>();
   const folders = new Set<string>();
   for (const row of (data ?? []) as any[]) {
     folders.add(`${userId}/characters/${row.id}/`);
     if (row.primary_reference_path) recorded.add(row.primary_reference_path);
-    for (const r of (row.reference_images ?? []) as { path?: string }[]) if (r?.path) recorded.add(r.path);
+    for (const r of (row.reference_images ?? []) as { path?: string }[])
+      if (r?.path) recorded.add(r.path);
   }
   return {
-    allows: (path: string) => recorded.has(path) || Array.from(folders).some((f) => path.startsWith(f)),
+    allows: (path: string) =>
+      recorded.has(path) || Array.from(folders).some((f) => path.startsWith(f)),
   };
 }
 
 /** Signs the private reference images for one character so the UI can preview them. */
 export const getCastReferenceUrls = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ paths: z.array(z.string().max(500)).max(16) }).parse(input))
+  .inputValidator((input: unknown) =>
+    z.object({ paths: z.array(z.string().max(500)).max(16) }).parse(input),
+  )
   .handler(async ({ data, context }) => {
     const { signReference } = await import("@/lib/character.server");
     const guard = await ownedReferencePaths(context.supabase, context.userId);
@@ -117,7 +123,8 @@ export const getCastCapabilities = createServerFn({ method: "GET" })
   .handler(async () => {
     const { providerStatus } = await import("@/lib/providers/index.server");
     const status = providerStatus();
-    const configured = (kind: string) => !!status.providers.find((p) => p.kind === kind)?.configured;
+    const configured = (kind: string) =>
+      !!status.providers.find((p) => p.kind === kind)?.configured;
     return {
       spokespersonVideo: { configured: configured("video") },
       voice: { configured: configured("voice") },
@@ -127,13 +134,14 @@ export const getCastCapabilities = createServerFn({ method: "GET" })
     };
   });
 
-
 export const saveCast = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => CastSchema.parse(input))
   .handler(async ({ data, context }) => {
     if (!data.rights_confirmed) {
-      throw new Error("You must confirm you have the rights and consent to use this likeness or voice.");
+      throw new Error(
+        "You must confirm you have the rights and consent to use this likeness or voice.",
+      );
     }
     const { supabase, userId } = context;
     const { id, consent_scope, consent_by, ...rest } = data;
@@ -143,7 +151,9 @@ export const saveCast = createServerFn({ method: "POST" })
     const primary =
       (rest.primary_reference_path && refs.some((r) => r.path === rest.primary_reference_path)
         ? rest.primary_reference_path
-        : refs.find((r) => r.primary)?.path) ?? refs[0]?.path ?? null;
+        : refs.find((r) => r.primary)?.path) ??
+      refs[0]?.path ??
+      null;
     const normalizedRefs = refs.map((r) => ({ ...r, primary: r.path === primary }));
 
     const appearance = rest.appearance_json ?? undefined;
@@ -183,9 +193,12 @@ export const saveCast = createServerFn({ method: "POST" })
       if (readErr) throw new Error(readErr.message);
       if (!existing) throw new Error("Character not found.");
 
-      const wasConfirmed = Boolean((existing as any).rights_confirmed) && !!(existing as any).consent_at;
+      const wasConfirmed =
+        Boolean((existing as any).rights_confirmed) && !!(existing as any).consent_at;
       fields.consent_at = wasConfirmed ? (existing as any).consent_at : new Date().toISOString();
-      fields.consent_user_id = wasConfirmed ? ((existing as any).consent_user_id ?? userId) : userId;
+      fields.consent_user_id = wasConfirmed
+        ? ((existing as any).consent_user_id ?? userId)
+        : userId;
 
       // owner_id is never part of `fields`, so an update cannot reassign ownership.
       const { error } = await supabase
@@ -245,9 +258,12 @@ export const updateCastReferences = createServerFn({ method: "POST" })
       if (!r.path.startsWith(`${userId}/`)) throw new Error("Not allowed");
     }
     const primary =
-      (data.primary_reference_path && data.reference_images.some((r) => r.path === data.primary_reference_path)
+      (data.primary_reference_path &&
+      data.reference_images.some((r) => r.path === data.primary_reference_path)
         ? data.primary_reference_path
-        : data.reference_images.find((r) => r.primary)?.path) ?? data.reference_images[0]?.path ?? null;
+        : data.reference_images.find((r) => r.primary)?.path) ??
+      data.reference_images[0]?.path ??
+      null;
     const refs = data.reference_images.map((r) => ({ ...r, primary: r.path === primary }));
 
     const { data: updated, error } = await supabase
@@ -261,7 +277,9 @@ export const updateCastReferences = createServerFn({ method: "POST" })
     if (!updated) throw new Error("Character not found.");
 
     // Only after the record no longer points at them do we drop the old files.
-    const removable = data.delete_paths.filter((p) => p.startsWith(prefix) || p.startsWith(`${userId}/characters/`));
+    const removable = data.delete_paths.filter(
+      (p) => p.startsWith(prefix) || p.startsWith(`${userId}/characters/`),
+    );
     if (removable.length) {
       const { error: rmErr } = await supabase.storage.from("project-assets").remove(removable);
       if (rmErr) return { id: data.id, storage_cleanup_failed: true };
@@ -294,7 +312,9 @@ export const deleteCast = createServerFn({ method: "POST" })
       );
     }
 
-    const paths = ((row.reference_images ?? []) as { path: string }[]).map((r) => r.path).filter(Boolean);
+    const paths = ((row.reference_images ?? []) as { path: string }[])
+      .map((r) => r.path)
+      .filter(Boolean);
     const { error } = await context.supabase
       .from("cast_members")
       .delete()
@@ -327,7 +347,7 @@ export const deleteCastReference = createServerFn({ method: "POST" })
     if (readErr) throw new Error(readErr.message);
     if (!row) throw new Error("Character not found.");
 
-    const refs = ((row.reference_images ?? []) as { path: string }[]) ?? [];
+    const refs = (row.reference_images ?? []) as { path: string }[];
     const belongsToCharacter =
       refs.some((r) => r.path === data.path) ||
       row.primary_reference_path === data.path ||
@@ -336,7 +356,9 @@ export const deleteCastReference = createServerFn({ method: "POST" })
 
     const remaining = refs.filter((r) => r.path !== data.path);
     const primary =
-      row.primary_reference_path === data.path ? (remaining[0]?.path ?? null) : row.primary_reference_path;
+      row.primary_reference_path === data.path
+        ? (remaining[0]?.path ?? null)
+        : row.primary_reference_path;
     const { error: updErr } = await supabase
       .from("cast_members")
       .update({ reference_images: remaining as any, primary_reference_path: primary })
@@ -348,7 +370,6 @@ export const deleteCastReference = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
-
 
 /** Production view of a saved character, used by the generation pipeline. */
 export const getCharacterProduction = createServerFn({ method: "POST" })
