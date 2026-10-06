@@ -266,6 +266,26 @@ export const updateCastReferences = createServerFn({ method: "POST" })
       null;
     const refs = data.reference_images.map((r) => ({ ...r, primary: r.path === primary }));
 
+    // Snapshot what the row already references so a failed link only rolls back
+    // files uploaded for this save, never previously saved references.
+    const { data: before, error: beforeErr } = await supabase
+      .from("cast_members")
+      .select("reference_images, primary_reference_path")
+      .eq("id", data.id)
+      .eq("owner_id", userId)
+      .maybeSingle();
+    if (beforeErr) throw new Error(beforeErr.message);
+    if (!before) throw new Error("Character not found.");
+    const previously = new Set<string>(
+      ((before.reference_images ?? []) as { path?: string }[])
+        .map((r) => r?.path)
+        .filter((p): p is string => !!p),
+    );
+    if (before.primary_reference_path) previously.add(before.primary_reference_path);
+    const newlyAdded = refs
+      .map((r) => r.path)
+      .filter((p) => p.startsWith(prefix) && !previously.has(p));
+
     const { data: updated, error } = await supabase
       .from("cast_members")
       .update({ reference_images: refs as any, primary_reference_path: primary })
@@ -273,18 +293,43 @@ export const updateCastReferences = createServerFn({ method: "POST" })
       .eq("owner_id", userId)
       .select("id")
       .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!updated) throw new Error("Character not found.");
+    if (error || !updated) {
+      // Rollback: delete files uploaded for this save so nothing is left unattached.
+      if (newlyAdded.length) await supabase.storage.from("project-assets").remove(newlyAdded);
+      throw new Error(error?.message ?? "Character not found.");
+    }
 
     // Only after the record no longer points at them do we drop the old files.
     const removable = data.delete_paths.filter(
       (p) => p.startsWith(prefix) || p.startsWith(`${userId}/characters/`),
     );
+    let cleanupFailed = false;
     if (removable.length) {
       const { error: rmErr } = await supabase.storage.from("project-assets").remove(removable);
-      if (rmErr) return { id: data.id, storage_cleanup_failed: true };
+      if (rmErr) cleanupFailed = true;
     }
-    return { id: data.id, storage_cleanup_failed: false };
+
+    // Sweep orphans left by earlier interrupted saves (e.g. the tab was closed
+    // after upload but before linking). Only files older than 15 minutes that
+    // the row does not reference are removed, so in-flight uploads are safe.
+    try {
+      const keep = new Set(refs.map((r) => r.path));
+      const folder = prefix.slice(0, -1);
+      const { data: objects } = await supabase.storage
+        .from("project-assets")
+        .list(folder, { limit: 100 });
+      const cutoff = Date.now() - 15 * 60 * 1000;
+      const orphans = ((objects ?? []) as { name: string; created_at?: string }[])
+        .filter((o) => o.name && !o.name.startsWith("."))
+        .filter((o) => !keep.has(`${prefix}${o.name}`))
+        .filter((o) => !o.created_at || new Date(o.created_at).getTime() < cutoff)
+        .map((o) => `${prefix}${o.name}`);
+      if (orphans.length) await supabase.storage.from("project-assets").remove(orphans);
+    } catch {
+      // Best-effort sweep; never fails a successful save.
+    }
+
+    return { id: data.id, storage_cleanup_failed: cleanupFailed };
   });
 
 export const deleteCast = createServerFn({ method: "POST" })
