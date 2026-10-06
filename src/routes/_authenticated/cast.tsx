@@ -23,6 +23,7 @@ import {
   updateCastReferences,
 } from "@/lib/library.functions";
 import { uploadCharacterReference, validateReferenceFile } from "@/lib/uploads";
+import { supabase } from "@/integrations/supabase/client";
 import {
   EMPTY_APPEARANCE,
   EMPTY_VOICE,
@@ -275,7 +276,8 @@ function CharacterStudio() {
       }
 
       let cleanupFailed = false;
-      if (uploaded.length || draft.removed.length) {
+      // Existing characters always relink so the server can sweep stale orphans.
+      if (uploaded.length || draft.removed.length || draft.id) {
         setBusy("Linking references…");
         const all = [...keptRefs, ...uploaded];
         const primary =
@@ -297,11 +299,18 @@ function CharacterStudio() {
           });
           cleanupFailed = Boolean((out as any)?.storage_cleanup_failed);
         } catch (e) {
-          // The character itself is saved; surface the reference failure truthfully.
+          // Rollback: the server already deletes this save's uploads when linking
+          // fails; this covers network errors where the server was never reached.
+          if (uploaded.length) {
+            await supabase.storage
+              .from("project-assets")
+              .remove(uploaded.map((u) => u.path))
+              .catch(() => undefined);
+          }
           queryClient.invalidateQueries({ queryKey: ["cast"] });
           setDraft((d) => ({ ...d, id }));
           toast.error(
-            `Character saved, but its reference images could not be linked: ${
+            `Character saved, but new reference images could not be linked and were discarded: ${
               e instanceof Error ? e.message : "unknown error"
             }`,
           );
@@ -916,7 +925,7 @@ function CharacterStudio() {
                       {member.appearance_prompt}
                     </p>
                   )}
-                  {member.consent_by && (
+                  {member.rights_confirmed && member.consent_at && member.consent_by && (
                     <p className="mt-2 text-xs text-muted-foreground">
                       Confirmed by {member.consent_by}
                       {member.consent_scope ? ` — ${member.consent_scope}` : ""}
