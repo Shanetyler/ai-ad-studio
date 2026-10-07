@@ -10,7 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, Sparkles, Upload, X } from "lucide-react";
+import { CheckCircle2, Globe, Loader2, Sparkles, Upload, X } from "lucide-react";
+import { scanWebsite } from "@/lib/business.functions";
+import { EMPTY_PROFILE, profileToBusinessInfo, type BusinessProfileData } from "@/lib/business-profile";
 import {
   AD_TYPES,
   BUSINESS_TYPES,
@@ -77,6 +79,47 @@ function CreateAd() {
   const [voiceId, setVoiceId] = useState("none");
 
   const set = (k: keyof BusinessInfo) => (v: string) => setBusiness((b) => ({ ...b, [k]: v }));
+
+  const scanFn = useServerFn(scanWebsite);
+  const [siteUrl, setSiteUrl] = useState("");
+  const [deep, setDeep] = useState(false);
+  const [importError, setImportError] = useState("");
+  const [imported, setImported] = useState<{ name: string; url: string; pages: number } | null>(null);
+  const importing = useMutation({
+    mutationFn: (url: string) => scanFn({ data: { url, depth: deep ? "deep" : "quick" } }),
+    onSuccess: (res) => {
+      const p = res.profile.profile_json as BusinessProfileData;
+      const info = profileToBusinessInfo({ ...EMPTY_PROFILE, ...p });
+      // Only fill fields the site gave us; keep anything the user already typed.
+      setBusiness((b) => {
+        const next = { ...b };
+        (Object.keys(info) as (keyof typeof info)[]).forEach((k) => {
+          const v = info[k];
+          if (v && k in next && !next[k as keyof BusinessInfo]) next[k as keyof BusinessInfo] = v;
+        });
+        if (!next.website) next.website = res.profile.website_url;
+        if (BUSINESS_TYPES.length && next.business_type && !(BUSINESS_TYPES as readonly string[]).includes(next.business_type)) next.business_type = "";
+        return next;
+      });
+      if (p.primary_color && /^#[0-9a-f]{6}$/i.test(p.primary_color)) setPrimary(p.primary_color);
+      if (p.secondary_color && /^#[0-9a-f]{6}$/i.test(p.secondary_color)) setSecondary(p.secondary_color);
+      setImported({ name: p.business_name, url: res.profile.website_url, pages: res.pages.length });
+      toast.success("Business details filled in — please review them");
+    },
+    onError: (e) => setImportError(e instanceof Error ? e.message : "We couldn't read that website."),
+  });
+  function startImport() {
+    setImportError("");
+    const raw = siteUrl.trim();
+    try {
+      const u = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+      if (!u.hostname.includes(".")) throw new Error();
+    } catch {
+      setImportError("That doesn't look like a website address (e.g. yourbusiness.com).");
+      return;
+    }
+    importing.mutate(raw);
+  }
 
   async function handleUpload(files: FileList | null, kind: "logo" | "scene") {
     if (!files?.length) return;
@@ -155,6 +198,46 @@ function CreateAd() {
         <div className="panel mt-6 space-y-5 p-6">
           {step === 0 && (
             <>
+              <div className="rounded-xl border border-border bg-secondary/40 p-4">
+                <div className="flex items-center gap-2 font-medium"><Globe className="h-4 w-4 text-primary" /> Start from a website</div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Paste your site and we'll fill in the fields below. You can edit everything afterwards, or skip this and type it in yourself.
+                </p>
+                {imported ? (
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                    <span>Filled in from <strong>{imported.name || imported.url}</strong> ({imported.pages} page{imported.pages === 1 ? "" : "s"} read). Please check the details.</span>
+                    <Button type="button" size="sm" variant="ghost" onClick={() => setImported(null)}>Analyze a different site</Button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                      <Input
+                        aria-label="Website address"
+                        value={siteUrl}
+                        onChange={(e) => setSiteUrl(e.target.value)}
+                        placeholder="yourbusiness.com"
+                        disabled={importing.isPending}
+                        onKeyDown={(e) => e.key === "Enter" && startImport()}
+                      />
+                      <Button type="button" onClick={startImport} disabled={importing.isPending || !siteUrl.trim()}>
+                        {importing.isPending ? <Loader2 className="animate-spin" /> : <Sparkles />}
+                        {importing.isPending ? (deep ? "Reading pages…" : "Reading site…") : "Fill from website"}
+                      </Button>
+                    </div>
+                    <div className="mt-2 flex items-center gap-2">
+                      <Switch id="deep-import" checked={deep} onCheckedChange={setDeep} disabled={importing.isPending} />
+                      <Label htmlFor="deep-import" className="text-xs font-normal text-muted-foreground">
+                        Deep scan (reads up to 10 pages, 2 credits). Off = quick scan of the home page, free.
+                      </Label>
+                    </div>
+                    {importing.isPending && (
+                      <p className="mt-2 text-xs text-muted-foreground">This usually takes {deep ? "20–45" : "5–15"} seconds.</p>
+                    )}
+                    {importError && <p className="mt-2 text-sm text-destructive">{importError} You can still fill in the details below.</p>}
+                  </>
+                )}
+              </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Business name *">
                   <Input value={business.business_name} onChange={(e) => set("business_name")(e.target.value)} placeholder="Wayne's Landscaping" />
