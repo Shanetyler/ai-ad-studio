@@ -9,6 +9,7 @@ import type {
   ImageProvider,
   MediaProvider,
   ProviderStatus,
+  ScriptCharacter,
   VideoProvider,
   VoiceProvider,
 } from "./types";
@@ -147,7 +148,7 @@ class GatewayAIProvider implements AIProvider {
         system:
           "You are a direct-response ad creative director. Write short-form video ads for small businesses. Return strict JSON.",
         prompt: `Create a ${style.duration}-second ${style.aspect} ${style.ad_type} ad in a ${style.tone} tone.
-Business: ${JSON.stringify(business)}
+Business: ${JSON.stringify(business)}${characterCtx}
 Return JSON: { "hook": string, "cta": string, "voiceover": string, "music_style": string, "scenes": [{"title","description","caption"}] } with exactly ${n} scenes. Captions must be under 48 characters.`,
       });
       const per = Math.max(2, Math.round((style.duration / n) * 10) / 10);

@@ -145,6 +145,7 @@ function CreateAd() {
           business: { ...business, cta: business.cta || "Call today" },
           style: { ad_type: adType, tone, aspect, duration },
           ...(brandId !== "none" ? { brandId } : {}),
+          ...(characterId !== "none" ? { characterId } : {}),
         },
       });
       // Apply wizard-level creative choices to the generated plan.
