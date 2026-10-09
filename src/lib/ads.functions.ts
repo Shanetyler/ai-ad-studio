@@ -100,6 +100,7 @@ export const generateAdPlan = createServerFn({ method: "POST" })
         style: StyleSchema,
         brandId: z.string().uuid().optional(),
         projectId: z.string().uuid().optional(),
+        characterId: z.string().uuid().optional(),
       })
       .parse(input),
   )
@@ -107,6 +108,48 @@ export const generateAdPlan = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const business = data.business as BusinessInfo;
     const style = data.style as AdStyle;
+
+    // Resolve the selected character before spending credits. The character must
+    // belong to this user and have confirmed rights; trusted server-side fields
+    // (never client-supplied prompts) feed the script provider.
+    let character:
+      | {
+          id: string;
+          name: string;
+          appearance_prompt: string;
+          voice_direction: string;
+          seed?: number;
+        }
+      | undefined;
+    if (data.characterId) {
+      const { data: owned } = await supabase
+        .from("cast_members")
+        .select("id, rights_confirmed")
+        .eq("id", data.characterId)
+        .eq("owner_id", userId)
+        .maybeSingle();
+      if (!owned)
+        throw new Error(
+          "That character was not found in your cast. Pick one of your saved characters.",
+        );
+      if (!owned.rights_confirmed)
+        throw new Error(
+          "This character's rights are not confirmed. Confirm usage rights in Character Studio first.",
+        );
+      const { loadCharacterProduction } = await import("@/lib/character.server");
+      const prod = await loadCharacterProduction(supabase, data.characterId);
+      if (!prod)
+        throw new Error(
+          "Could not load the selected character. Try again or pick another character.",
+        );
+      character = {
+        id: prod.id,
+        name: prod.name,
+        appearance_prompt: prod.appearance_prompt,
+        voice_direction: prod.voice_direction,
+        ...(prod.seed !== undefined ? { seed: prod.seed } : {}),
+      };
+    }
 
     const { data: job, error: jErr } = await supabase
       .from("jobs")
@@ -132,7 +175,9 @@ export const generateAdPlan = createServerFn({ method: "POST" })
       if (data.brandId) {
         const { data: brand } = await supabase
           .from("brands")
-          .select("tone, primary_color, secondary_color, logo_url, default_cta, font_preference, phone, website_url")
+          .select(
+            "tone, primary_color, secondary_color, logo_url, default_cta, font_preference, phone, website_url",
+          )
           .eq("id", data.brandId)
           .maybeSingle();
         brandTone = brand?.tone ?? undefined;
@@ -142,7 +187,8 @@ export const generateAdPlan = createServerFn({ method: "POST" })
           business.cta = business.cta || brand.default_cta || "";
         }
       }
-      plan = await getAIProvider().generateAdScript({ business, style, brandTone });
+      plan = await getAIProvider().generateAdScript({ business, style, brandTone, character });
+      if (character) plan.character_id = character.id;
 
       if (data.brandId) {
         const { data: brand } = await supabase
@@ -156,7 +202,11 @@ export const generateAdPlan = createServerFn({ method: "POST" })
             secondary: brand.secondary_color || plan.palette.secondary,
           };
           if (brand.logo_url) plan.logo_url = brand.logo_url;
-          if (brand.font_preference === "display" || brand.font_preference === "sans" || brand.font_preference === "mono") {
+          if (
+            brand.font_preference === "display" ||
+            brand.font_preference === "sans" ||
+            brand.font_preference === "mono"
+          ) {
             plan.font = brand.font_preference;
           }
         }
@@ -165,7 +215,11 @@ export const generateAdPlan = createServerFn({ method: "POST" })
       await refund(context, userId, PLAN_CREDIT_COST, "ad_plan_failed", job.id);
       await supabase
         .from("jobs")
-        .update({ status: "failed", error: String(err).slice(0, 400), finished_at: new Date().toISOString() })
+        .update({
+          status: "failed",
+          error: String(err).slice(0, 400),
+          finished_at: new Date().toISOString(),
+        })
         .eq("id", job.id);
       throw err;
     }
@@ -173,7 +227,7 @@ export const generateAdPlan = createServerFn({ method: "POST" })
     const title = `${business.business_name} — ${style.ad_type}`.slice(0, 120);
     let projectId = data.projectId;
 
-const charId = /^[0-9a-f-]{36}$/i.test(plan.character_id ?? "") ? plan.character_id! : null;
+    const charId = /^[0-9a-f-]{36}$/i.test(plan.character_id ?? "") ? plan.character_id! : null;
 
     if (projectId) {
       const { error } = await supabase
@@ -234,7 +288,13 @@ const charId = /^[0-9a-f-]{36}$/i.test(plan.character_id ?? "") ? plan.character
 export const updateAdPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z.object({ projectId: z.string().uuid(), plan: PlanSchema, title: z.string().max(120).optional() }).parse(input),
+    z
+      .object({
+        projectId: z.string().uuid(),
+        plan: PlanSchema,
+        title: z.string().max(120).optional(),
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
@@ -265,7 +325,9 @@ export const listAds = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("projects")
-      .select("id, title, status, ad_type, tone, aspect_ratio, video_status, supabase_video_path, duration_seconds, created_at, plan_json")
+      .select(
+        "id, title, status, ad_type, tone, aspect_ratio, video_status, supabase_video_path, duration_seconds, created_at, plan_json",
+      )
       .order("created_at", { ascending: false })
       .limit(100);
     if (error) throw new Error(error.message);
@@ -298,13 +360,20 @@ export const duplicateAd = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const { data: src, error } = await supabase
       .from("projects")
-      .select("title, brief, business_json, plan_json, ad_type, tone, aspect_ratio, duration_target, brand_id")
+      .select(
+        "title, brief, business_json, plan_json, ad_type, tone, aspect_ratio, duration_target, brand_id",
+      )
       .eq("id", data.projectId)
       .single();
     if (error || !src) throw new Error("Ad not found");
     const { data: copy, error: cErr } = await supabase
       .from("projects")
-      .insert({ ...src, owner_id: userId, title: `${src.title} (copy)`.slice(0, 120), status: "planned" })
+      .insert({
+        ...src,
+        owner_id: userId,
+        title: `${src.title} (copy)`.slice(0, 120),
+        status: "planned",
+      })
       .select("id")
       .single();
     if (cErr) throw new Error(cErr.message);
@@ -323,7 +392,8 @@ export const startAdRender = createServerFn({ method: "POST" })
       .eq("id", data.projectId)
       .single();
     if (error || !project) throw new Error("Ad not found");
-    if (project.video_status === "rendering") throw new Error("A render is already running for this ad");
+    if (project.video_status === "rendering")
+      throw new Error("A render is already running for this ad");
 
     const { providerStatus } = await import("@/lib/providers/index.server");
     const status = providerStatus();
@@ -386,7 +456,12 @@ export const completeAdRender = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     await supabase
       .from("jobs")
-      .update({ status: "succeeded", progress: 100, finished_at: new Date().toISOString(), output_json: { path: data.path } })
+      .update({
+        status: "succeeded",
+        progress: 100,
+        finished_at: new Date().toISOString(),
+        output_json: { path: data.path },
+      })
       .eq("id", data.jobId);
     return { ok: true };
   });
@@ -394,7 +469,13 @@ export const completeAdRender = createServerFn({ method: "POST" })
 export const failAdRender = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z.object({ projectId: z.string().uuid(), jobId: z.string().uuid(), message: z.string().max(400) }).parse(input),
+    z
+      .object({
+        projectId: z.string().uuid(),
+        jobId: z.string().uuid(),
+        message: z.string().max(400),
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
@@ -405,7 +486,11 @@ export const failAdRender = createServerFn({ method: "POST" })
       .eq("id", data.projectId);
     await supabase
       .from("jobs")
-      .update({ status: "failed", error: data.message.slice(0, 400), finished_at: new Date().toISOString() })
+      .update({
+        status: "failed",
+        error: data.message.slice(0, 400),
+        finished_at: new Date().toISOString(),
+      })
       .eq("id", data.jobId);
     return { ok: true, refunded: RENDER_CREDIT_COST };
   });

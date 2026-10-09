@@ -9,6 +9,7 @@ import type {
   ImageProvider,
   MediaProvider,
   ProviderStatus,
+  ScriptCharacter,
   VideoProvider,
   VoiceProvider,
 } from "./types";
@@ -29,7 +30,7 @@ function sceneCount(duration: number) {
   return 7;
 }
 
-function mockPlan(business: BusinessInfo, style: AdStyle): AdPlan {
+function mockPlan(business: BusinessInfo, style: AdStyle, character?: ScriptCharacter): AdPlan {
   const name = business.business_name || "Your business";
   const where = business.location ? ` in ${business.location}` : "";
   const offer = business.offer?.trim();
@@ -42,17 +43,23 @@ function mockPlan(business: BusinessInfo, style: AdStyle): AdPlan {
     {
       title: "The problem",
       description: `Everyday frustration your customer feels before finding ${name}.`,
-      caption: business.target_customer ? `For ${business.target_customer}` : "Tired of settling for less?",
+      caption: business.target_customer
+        ? `For ${business.target_customer}`
+        : "Tired of settling for less?",
     },
     {
-      title: "Meet the pro",
-      description: `${name}${where} steps in — ${business.description || business.products || "doing the work properly"}.`,
-      caption: `${name}${where}`,
+      title: character ? `Meet ${character.name}` : "Meet the pro",
+      description: character
+        ? `${character.name} introduces ${name}${where} — ${business.description || business.products || "doing the work properly"}. ${character.appearance_prompt}`
+        : `${name}${where} steps in — ${business.description || business.products || "doing the work properly"}.`,
+      caption: character ? `${character.name} for ${name}` : `${name}${where}`,
     },
     {
       title: "The work",
       description: business.products || "The service in motion: careful, fast, professional.",
-      caption: business.products ? business.products.split(/[,.]/)[0]!.trim() : "Done right the first time",
+      caption: business.products
+        ? business.products.split(/[,.]/)[0]!.trim()
+        : "Done right the first time",
     },
     {
       title: "The result",
@@ -102,7 +109,12 @@ function mockPlan(business: BusinessInfo, style: AdStyle): AdPlan {
     ]
       .filter(Boolean)
       .join(" "),
-    music_style: style.tone === "Luxury" ? "Cinematic, elegant piano" : style.tone === "Energetic" ? "Upbeat electronic" : "Confident modern pop",
+    music_style:
+      style.tone === "Luxury"
+        ? "Cinematic, elegant piano"
+        : style.tone === "Energetic"
+          ? "Upbeat electronic"
+          : "Confident modern pop",
     captions_enabled: true,
     palette: { primary: "#f59e0b", secondary: "#111827" },
     font: "display",
@@ -114,18 +126,30 @@ function mockPlan(business: BusinessInfo, style: AdStyle): AdPlan {
 class MockAIProvider implements AIProvider {
   id = "easyad-template-engine";
   mode = "mock" as const;
-  async generateAdScript(input: { business: BusinessInfo; style: AdStyle }) {
-    return mockPlan(input.business, input.style);
+  async generateAdScript(input: {
+    business: BusinessInfo;
+    style: AdStyle;
+    character?: ScriptCharacter;
+  }) {
+    return mockPlan(input.business, input.style, input.character);
   }
 }
 
 class GatewayAIProvider implements AIProvider {
   id = "lovable-ai-gateway";
   mode = "real" as const;
-  async generateAdScript(input: { business: BusinessInfo; style: AdStyle; brandTone?: string }) {
-    const { business, style } = input;
+  async generateAdScript(input: {
+    business: BusinessInfo;
+    style: AdStyle;
+    brandTone?: string;
+    character?: ScriptCharacter;
+  }) {
+    const { business, style, character } = input;
     const n = sceneCount(style.duration);
-    const fallback = mockPlan(business, style);
+    const fallback = mockPlan(business, style, character);
+    const characterCtx = character
+      ? `\nOn-screen spokesperson: ${character.name}. Appearance: ${character.appearance_prompt}. Voice direction: ${character.voice_direction}. Feature ${character.name} consistently across scenes (same person, same look); write scene descriptions that include them where a person appears, and write the voiceover in their voice.`
+      : "";
     try {
       const out = await aiJson<{
         hook: string;
@@ -137,7 +161,7 @@ class GatewayAIProvider implements AIProvider {
         system:
           "You are a direct-response ad creative director. Write short-form video ads for small businesses. Return strict JSON.",
         prompt: `Create a ${style.duration}-second ${style.aspect} ${style.ad_type} ad in a ${style.tone} tone.
-Business: ${JSON.stringify(business)}
+Business: ${JSON.stringify(business)}${characterCtx}
 Return JSON: { "hook": string, "cta": string, "voiceover": string, "music_style": string, "scenes": [{"title","description","caption"}] } with exactly ${n} scenes. Captions must be under 48 characters.`,
       });
       const per = Math.max(2, Math.round((style.duration / n) * 10) / 10);
@@ -186,7 +210,12 @@ class MockVideoProvider implements VideoProvider {
 class FalVideoProvider implements VideoProvider {
   id = "fal-ai/kling-video";
   mode = "real" as const;
-  async generateScene(input: { prompt: string; aspect: string; duration: number; imageUrl?: string }) {
+  async generateScene(input: {
+    prompt: string;
+    aspect: string;
+    duration: number;
+    imageUrl?: string;
+  }) {
     const key = env("FAL_KEY");
     const path = input.imageUrl
       ? "fal-ai/kling-video/v2/master/image-to-video"
@@ -201,7 +230,8 @@ class FalVideoProvider implements VideoProvider {
         ...(input.imageUrl ? { image_url: input.imageUrl } : {}),
       }),
     });
-    if (!res.ok) return { id: "", status: "failed" as const, error: `Provider error ${res.status}` };
+    if (!res.ok)
+      return { id: "", status: "failed" as const, error: `Provider error ${res.status}` };
     const json = (await res.json()) as { request_id: string };
     return { id: json.request_id, status: "queued" as const };
   }
@@ -212,7 +242,11 @@ class FalVideoProvider implements VideoProvider {
     if (!res.ok) return { id, status: "failed" as const, error: `Provider error ${res.status}` };
     const json = (await res.json()) as { status: string };
     const status =
-      json.status === "COMPLETED" ? "succeeded" : json.status === "IN_PROGRESS" ? "running" : "queued";
+      json.status === "COMPLETED"
+        ? "succeeded"
+        : json.status === "IN_PROGRESS"
+          ? "running"
+          : "queued";
     return { id, status: status as "queued" | "running" | "succeeded" };
   }
   async downloadVideo(id: string) {
@@ -234,8 +268,7 @@ class MockVoiceProvider implements VoiceProvider {
     return {
       audioBase64: null,
       mime: null,
-      note:
-        "Demo mode: no voice service is configured, so the ad renders with captions and a music bed. Connect a voice provider to add narration.",
+      note: "Demo mode: no voice service is configured, so the ad renders with captions and a music bed. Connect a voice provider to add narration.",
     };
   }
 }
@@ -321,7 +354,10 @@ export function providerStatus(): ProviderStatus {
         id: ai.id,
         mode: ai.mode,
         configured: ai.mode === "real",
-        note: ai.mode === "real" ? "Scripts written by AI." : "Scripts built from Easy Ad's template engine.",
+        note:
+          ai.mode === "real"
+            ? "Scripts written by AI."
+            : "Scripts built from Easy Ad's template engine.",
       },
       {
         kind: "video",
@@ -338,16 +374,28 @@ export function providerStatus(): ProviderStatus {
         id: voice.id,
         mode: voice.mode,
         configured: voice.mode === "real",
-        note: voice.mode === "real" ? "AI narration enabled." : "Captions + music bed only. Add ELEVENLABS_API_KEY for narration.",
+        note:
+          voice.mode === "real"
+            ? "AI narration enabled."
+            : "Captions + music bed only. Add ELEVENLABS_API_KEY for narration.",
       },
       {
         kind: "image",
         id: image.id,
         mode: image.mode,
         configured: image.mode === "real",
-        note: image.mode === "real" ? "AI scene imagery available." : "Generated gradients and motion graphics.",
+        note:
+          image.mode === "real"
+            ? "AI scene imagery available."
+            : "Generated gradients and motion graphics.",
       },
-      { kind: "media", id: media.id, mode: media.mode, configured: true, note: "Built-in demo media library." },
+      {
+        kind: "media",
+        id: media.id,
+        mode: media.mode,
+        configured: true,
+        note: "Built-in demo media library.",
+      },
     ],
   };
 }
