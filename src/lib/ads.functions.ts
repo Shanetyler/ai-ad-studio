@@ -171,7 +171,8 @@ export const generateAdPlan = createServerFn({ method: "POST" })
           business.cta = business.cta || brand.default_cta || "";
         }
       }
-      plan = await getAIProvider().generateAdScript({ business, style, brandTone });
+      plan = await getAIProvider().generateAdScript({ business, style, brandTone, character });
+      if (character) plan.character_id = character.id;
 
       if (data.brandId) {
         const { data: brand } = await supabase

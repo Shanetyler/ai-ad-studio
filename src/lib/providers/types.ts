@@ -19,10 +19,24 @@ export type ProviderStatus = {
   providers: ProviderInfo[];
 };
 
+/** Trusted, server-resolved character context for script generation. */
+export type ScriptCharacter = {
+  id: string;
+  name: string;
+  appearance_prompt: string;
+  voice_direction: string;
+  seed?: number;
+};
+
 export interface AIProvider {
   id: string;
   mode: ProviderMode;
-  generateAdScript(input: { business: BusinessInfo; style: AdStyle; brandTone?: string }): Promise<AdPlan>;
+  generateAdScript(input: {
+    business: BusinessInfo;
+    style: AdStyle;
+    brandTone?: string;
+    character?: ScriptCharacter;
+  }): Promise<AdPlan>;
 }
 
 export type SceneJob = { id: string; status: "queued" | "running" | "succeeded" | "failed"; url?: string; error?: string };
