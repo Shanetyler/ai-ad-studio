@@ -8,11 +8,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { CheckCircle2, Globe, Loader2, Sparkles, Upload, X } from "lucide-react";
 import { scanWebsite } from "@/lib/business.functions";
-import { EMPTY_PROFILE, profileToBusinessInfo, type BusinessProfileData } from "@/lib/business-profile";
+import {
+  EMPTY_PROFILE,
+  profileToBusinessInfo,
+  type BusinessProfileData,
+} from "@/lib/business-profile";
 import {
   AD_TYPES,
   BUSINESS_TYPES,
@@ -34,9 +44,17 @@ export const Route = createFileRoute("/_authenticated/create")({
   head: () => ({
     meta: [
       { title: "Create an ad — EASY ADs" },
-      { name: "description", content: "Answer a few questions about your business and EASY ADs writes, storyboards and renders a ready-to-post video ad." },
+      {
+        name: "description",
+        content:
+          "Answer a few questions about your business and EASY ADs writes, storyboards and renders a ready-to-post video ad.",
+      },
       { property: "og:title", content: "Create an ad — EASY ADs" },
-      { property: "og:description", content: "Build a downloadable video ad in minutes: script, storyboard, captions and export." },
+      {
+        property: "og:description",
+        content:
+          "Build a downloadable video ad in minutes: script, storyboard, captions and export.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -44,7 +62,14 @@ export const Route = createFileRoute("/_authenticated/create")({
   component: CreateAd,
 });
 
-const OBJECTIVES = ["Get more calls", "Drive website visits", "Promote an offer", "Build brand awareness", "Launch a product", "Book appointments"];
+const OBJECTIVES = [
+  "Get more calls",
+  "Drive website visits",
+  "Promote an offer",
+  "Build brand awareness",
+  "Launch a product",
+  "Book appointments",
+];
 
 const STEPS = ["Business", "Media", "Format & style", "Cast & voice"] as const;
 
@@ -55,8 +80,16 @@ function CreateAd() {
   const brandsFn = useServerFn(listBrandKits);
   const castFn = useServerFn(listCast);
 
-  const { data: brands = [] } = useQuery({ queryKey: ["brand-kits"], queryFn: () => brandsFn(), retry: false });
-  const { data: cast = [] } = useQuery({ queryKey: ["cast"], queryFn: () => castFn(), retry: false });
+  const { data: brands = [] } = useQuery({
+    queryKey: ["brand-kits"],
+    queryFn: () => brandsFn(),
+    retry: false,
+  });
+  const { data: cast = [] } = useQuery({
+    queryKey: ["cast"],
+    queryFn: () => castFn(),
+    retry: false,
+  });
   const characters = cast.filter((c) => c.kind === "character");
   const voices = cast.filter((c) => c.kind === "voice");
 
@@ -84,7 +117,9 @@ function CreateAd() {
   const [siteUrl, setSiteUrl] = useState("");
   const [deep, setDeep] = useState(false);
   const [importError, setImportError] = useState("");
-  const [imported, setImported] = useState<{ name: string; url: string; pages: number } | null>(null);
+  const [imported, setImported] = useState<{ name: string; url: string; pages: number } | null>(
+    null,
+  );
   const importing = useMutation({
     mutationFn: (url: string) => scanFn({ data: { url, depth: deep ? "deep" : "quick" } }),
     onSuccess: (res) => {
@@ -98,15 +133,22 @@ function CreateAd() {
           if (v && k in next && !next[k as keyof BusinessInfo]) next[k as keyof BusinessInfo] = v;
         });
         if (!next.website) next.website = res.profile.website_url;
-        if (BUSINESS_TYPES.length && next.business_type && !(BUSINESS_TYPES as readonly string[]).includes(next.business_type)) next.business_type = "";
+        if (
+          BUSINESS_TYPES.length &&
+          next.business_type &&
+          !(BUSINESS_TYPES as readonly string[]).includes(next.business_type)
+        )
+          next.business_type = "";
         return next;
       });
       if (p.primary_color && /^#[0-9a-f]{6}$/i.test(p.primary_color)) setPrimary(p.primary_color);
-      if (p.secondary_color && /^#[0-9a-f]{6}$/i.test(p.secondary_color)) setSecondary(p.secondary_color);
+      if (p.secondary_color && /^#[0-9a-f]{6}$/i.test(p.secondary_color))
+        setSecondary(p.secondary_color);
       setImported({ name: p.business_name, url: res.profile.website_url, pages: res.pages.length });
       toast.success("Business details filled in — please review them");
     },
-    onError: (e) => setImportError(e instanceof Error ? e.message : "We couldn't read that website."),
+    onError: (e) =>
+      setImportError(e instanceof Error ? e.message : "We couldn't read that website."),
   });
   function startImport() {
     setImportError("");
@@ -188,7 +230,11 @@ function CreateAd() {
             <li
               key={label}
               className={`rounded-full border px-3 py-1 ${
-                i === step ? "border-primary text-primary" : i < step ? "border-border text-foreground" : "border-border/50 text-muted-foreground"
+                i === step
+                  ? "border-primary text-primary"
+                  : i < step
+                    ? "border-border text-foreground"
+                    : "border-border/50 text-muted-foreground"
               }`}
             >
               {i + 1}. {label}
@@ -200,15 +246,29 @@ function CreateAd() {
           {step === 0 && (
             <>
               <div className="rounded-xl border border-border bg-secondary/40 p-4">
-                <div className="flex items-center gap-2 font-medium"><Globe className="h-4 w-4 text-primary" /> Start from a website</div>
+                <div className="flex items-center gap-2 font-medium">
+                  <Globe className="h-4 w-4 text-primary" /> Start from a website
+                </div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Paste your site and we'll fill in the fields below. You can edit everything afterwards, or skip this and type it in yourself.
+                  Paste your site and we'll fill in the fields below. You can edit everything
+                  afterwards, or skip this and type it in yourself.
                 </p>
                 {imported ? (
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
                     <CheckCircle2 className="h-4 w-4 text-primary" />
-                    <span>Filled in from <strong>{imported.name || imported.url}</strong> ({imported.pages} page{imported.pages === 1 ? "" : "s"} read). Please check the details.</span>
-                    <Button type="button" size="sm" variant="ghost" onClick={() => setImported(null)}>Analyze a different site</Button>
+                    <span>
+                      Filled in from <strong>{imported.name || imported.url}</strong> (
+                      {imported.pages} page{imported.pages === 1 ? "" : "s"} read). Please check the
+                      details.
+                    </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setImported(null)}
+                    >
+                      Analyze a different site
+                    </Button>
                   </div>
                 ) : (
                   <>
@@ -221,61 +281,131 @@ function CreateAd() {
                         disabled={importing.isPending}
                         onKeyDown={(e) => e.key === "Enter" && startImport()}
                       />
-                      <Button type="button" onClick={startImport} disabled={importing.isPending || !siteUrl.trim()}>
+                      <Button
+                        type="button"
+                        onClick={startImport}
+                        disabled={importing.isPending || !siteUrl.trim()}
+                      >
                         {importing.isPending ? <Loader2 className="animate-spin" /> : <Sparkles />}
-                        {importing.isPending ? (deep ? "Reading pages…" : "Reading site…") : "Fill from website"}
+                        {importing.isPending
+                          ? deep
+                            ? "Reading pages…"
+                            : "Reading site…"
+                          : "Fill from website"}
                       </Button>
                     </div>
                     <div className="mt-2 flex items-center gap-2">
-                      <Switch id="deep-import" checked={deep} onCheckedChange={setDeep} disabled={importing.isPending} />
-                      <Label htmlFor="deep-import" className="text-xs font-normal text-muted-foreground">
-                        Deep scan (reads up to 10 pages, 2 credits). Off = quick scan of the home page, free.
+                      <Switch
+                        id="deep-import"
+                        checked={deep}
+                        onCheckedChange={setDeep}
+                        disabled={importing.isPending}
+                      />
+                      <Label
+                        htmlFor="deep-import"
+                        className="text-xs font-normal text-muted-foreground"
+                      >
+                        Deep scan (reads up to 10 pages, 2 credits). Off = quick scan of the home
+                        page, free.
                       </Label>
                     </div>
                     {importing.isPending && (
-                      <p className="mt-2 text-xs text-muted-foreground">This usually takes {deep ? "20–45" : "5–15"} seconds.</p>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        This usually takes {deep ? "20–45" : "5–15"} seconds.
+                      </p>
                     )}
-                    {importError && <p className="mt-2 text-sm text-destructive">{importError} You can still fill in the details below.</p>}
+                    {importError && (
+                      <p className="mt-2 text-sm text-destructive">
+                        {importError} You can still fill in the details below.
+                      </p>
+                    )}
                   </>
                 )}
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Business name *">
-                  <Input value={business.business_name} onChange={(e) => set("business_name")(e.target.value)} placeholder="Wayne's Landscaping" />
+                  <Input
+                    value={business.business_name}
+                    onChange={(e) => set("business_name")(e.target.value)}
+                    placeholder="Wayne's Landscaping"
+                  />
                 </Field>
                 <Field label="Business type">
-                  <Select value={business.business_type || undefined} onValueChange={set("business_type")}>
-                    <SelectTrigger><SelectValue placeholder="Choose a type" /></SelectTrigger>
+                  <Select
+                    value={business.business_type || undefined}
+                    onValueChange={set("business_type")}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a type" />
+                    </SelectTrigger>
                     <SelectContent>
-                      {BUSINESS_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                      {BUSINESS_TYPES.map((t) => (
+                        <SelectItem key={t} value={t}>
+                          {t}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </Field>
               </div>
               <Field label="What does the business do?">
-                <Textarea rows={3} value={business.description} onChange={(e) => set("description")(e.target.value)} placeholder="Full-service lawn care and garden design for homeowners." />
+                <Textarea
+                  rows={3}
+                  value={business.description}
+                  onChange={(e) => set("description")(e.target.value)}
+                  placeholder="Full-service lawn care and garden design for homeowners."
+                />
               </Field>
               <Field label="Products or services to feature">
-                <Textarea rows={2} value={business.products} onChange={(e) => set("products")(e.target.value)} placeholder="Weekly mowing, hedge trimming, seasonal cleanups" />
+                <Textarea
+                  rows={2}
+                  value={business.products}
+                  onChange={(e) => set("products")(e.target.value)}
+                  placeholder="Weekly mowing, hedge trimming, seasonal cleanups"
+                />
               </Field>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Target customer / audience">
-                  <Input value={business.target_customer} onChange={(e) => set("target_customer")(e.target.value)} placeholder="Homeowners aged 30-60" />
+                  <Input
+                    value={business.target_customer}
+                    onChange={(e) => set("target_customer")(e.target.value)}
+                    placeholder="Homeowners aged 30-60"
+                  />
                 </Field>
                 <Field label="Location">
-                  <Input value={business.location} onChange={(e) => set("location")(e.target.value)} placeholder="Austin, TX" />
+                  <Input
+                    value={business.location}
+                    onChange={(e) => set("location")(e.target.value)}
+                    placeholder="Austin, TX"
+                  />
                 </Field>
                 <Field label="Phone">
-                  <Input value={business.phone} onChange={(e) => set("phone")(e.target.value)} placeholder="(555) 123-4567" />
+                  <Input
+                    value={business.phone}
+                    onChange={(e) => set("phone")(e.target.value)}
+                    placeholder="(555) 123-4567"
+                  />
                 </Field>
                 <Field label="Website URL (optional)">
-                  <Input value={business.website} onChange={(e) => set("website")(e.target.value)} placeholder="https://example.com" />
+                  <Input
+                    value={business.website}
+                    onChange={(e) => set("website")(e.target.value)}
+                    placeholder="https://example.com"
+                  />
                 </Field>
                 <Field label="Special offer (optional)">
-                  <Input value={business.offer} onChange={(e) => set("offer")(e.target.value)} placeholder="20% off first cleanup" />
+                  <Input
+                    value={business.offer}
+                    onChange={(e) => set("offer")(e.target.value)}
+                    placeholder="20% off first cleanup"
+                  />
                 </Field>
                 <Field label="Call to action">
-                  <Input value={business.cta} onChange={(e) => set("cta")(e.target.value)} placeholder="Call today for a free quote" />
+                  <Input
+                    value={business.cta}
+                    onChange={(e) => set("cta")(e.target.value)}
+                    placeholder="Call today for a free quote"
+                  />
                 </Field>
               </div>
             </>
@@ -287,31 +417,68 @@ function CreateAd() {
                 <div className="flex items-center gap-3">
                   <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-2 text-sm hover:bg-accent">
                     <Upload className="h-4 w-4" /> Upload logo
-                    <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e.target.files, "logo")} />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => handleUpload(e.target.files, "logo")}
+                    />
                   </label>
                   {logoUrl && (
                     <div className="flex items-center gap-2">
-                      <img src={logoUrl} alt="Uploaded logo" className="h-10 w-10 rounded border border-border object-contain" />
-                      <Button type="button" size="sm" variant="ghost" onClick={() => setLogoUrl("")}><X className="h-4 w-4" /></Button>
+                      <img
+                        src={logoUrl}
+                        alt="Uploaded logo"
+                        className="h-10 w-10 rounded border border-border object-contain"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setLogoUrl("")}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
                   )}
                 </div>
               </Field>
 
-              <Field label="Product / job photos (optional)" hint="Used as scene backgrounds in order. Scenes without a photo use animated graphics.">
+              <Field
+                label="Product / job photos (optional)"
+                hint="Used as scene backgrounds in order. Scenes without a photo use animated graphics."
+              >
                 <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-2 text-sm hover:bg-accent">
                   <Upload className="h-4 w-4" /> Add images
-                  <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleUpload(e.target.files, "scene")} />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => handleUpload(e.target.files, "scene")}
+                  />
                 </label>
               </Field>
 
-              {uploading && <p className="text-sm text-muted-foreground"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />Uploading…</p>}
+              {uploading && (
+                <p className="text-sm text-muted-foreground">
+                  <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
+                  Uploading…
+                </p>
+              )}
 
               {sceneImages.length > 0 && (
                 <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
                   {sceneImages.map((url, i) => (
-                    <div key={url} className="relative overflow-hidden rounded-lg border border-border">
-                      <img src={url} alt={`Scene image ${i + 1}`} className="h-24 w-full object-cover" />
+                    <div
+                      key={url}
+                      className="relative overflow-hidden rounded-lg border border-border"
+                    >
+                      <img
+                        src={url}
+                        alt={`Scene image ${i + 1}`}
+                        className="h-24 w-full object-cover"
+                      />
                       <button
                         type="button"
                         aria-label="Remove image"
@@ -325,12 +492,21 @@ function CreateAd() {
                 </div>
               )}
 
-              <Field label="Brand kit (optional)" hint="Applies saved colors, logo, font and contact details.">
+              <Field
+                label="Brand kit (optional)"
+                hint="Applies saved colors, logo, font and contact details."
+              >
                 <Select value={brandId} onValueChange={setBrandId}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">No brand kit</SelectItem>
-                    {brands.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                    {brands.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </Field>
@@ -342,26 +518,58 @@ function CreateAd() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Objective">
                   <Select value={objective} onValueChange={setObjective}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{OBJECTIVES.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {OBJECTIVES.map((o) => (
+                        <SelectItem key={o} value={o}>
+                          {o}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                 </Field>
                 <Field label="Ad type">
                   <Select value={adType} onValueChange={setAdType}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{AD_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AD_TYPES.map((t) => (
+                        <SelectItem key={t} value={t}>
+                          {t}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                 </Field>
                 <Field label="Tone">
                   <Select value={tone} onValueChange={setTone}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{TONES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TONES.map((t) => (
+                        <SelectItem key={t} value={t}>
+                          {t}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                 </Field>
                 <Field label="Duration">
                   <Select value={String(duration)} onValueChange={(v) => setDuration(Number(v))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{DURATIONS.map((d) => <SelectItem key={d} value={String(d)}>{d} seconds</SelectItem>)}</SelectContent>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DURATIONS.map((d) => (
+                        <SelectItem key={d} value={String(d)}>
+                          {d} seconds
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                 </Field>
               </div>
@@ -374,10 +582,14 @@ function CreateAd() {
                       type="button"
                       onClick={() => setAspect(f.id)}
                       className={`rounded-xl border p-3 text-left text-sm transition-colors ${
-                        aspect === f.id ? "border-primary bg-secondary" : "border-border hover:bg-accent"
+                        aspect === f.id
+                          ? "border-primary bg-secondary"
+                          : "border-border hover:bg-accent"
                       }`}
                     >
-                      <div className="font-medium">{f.label} · {f.id}</div>
+                      <div className="font-medium">
+                        {f.label} · {f.id}
+                      </div>
                       <div className="text-xs text-muted-foreground">{f.hint}</div>
                     </button>
                   ))}
@@ -387,20 +599,43 @@ function CreateAd() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Primary color">
                   <div className="flex items-center gap-2">
-                    <input type="color" value={primary} onChange={(e) => setPrimary(e.target.value)} className="h-9 w-12 rounded border border-border bg-transparent" aria-label="Primary color" />
+                    <input
+                      type="color"
+                      value={primary}
+                      onChange={(e) => setPrimary(e.target.value)}
+                      className="h-9 w-12 rounded border border-border bg-transparent"
+                      aria-label="Primary color"
+                    />
                     <Input value={primary} onChange={(e) => setPrimary(e.target.value)} />
                   </div>
                 </Field>
                 <Field label="Secondary color">
                   <div className="flex items-center gap-2">
-                    <input type="color" value={secondary} onChange={(e) => setSecondary(e.target.value)} className="h-9 w-12 rounded border border-border bg-transparent" aria-label="Secondary color" />
+                    <input
+                      type="color"
+                      value={secondary}
+                      onChange={(e) => setSecondary(e.target.value)}
+                      className="h-9 w-12 rounded border border-border bg-transparent"
+                      aria-label="Secondary color"
+                    />
                     <Input value={secondary} onChange={(e) => setSecondary(e.target.value)} />
                   </div>
                 </Field>
                 <Field label="Scene transition">
-                  <Select value={transition} onValueChange={(v) => setTransition(v as TransitionId)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{TRANSITIONS.map((t) => <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>)}</SelectContent>
+                  <Select
+                    value={transition}
+                    onValueChange={(v) => setTransition(v as TransitionId)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TRANSITIONS.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                 </Field>
                 <div className="flex items-end gap-3 pb-2">
@@ -413,27 +648,46 @@ function CreateAd() {
 
           {step === 3 && (
             <>
-              <Field label="Character" hint="Saved from your cast library. Guides how people are described in the script.">
+              <Field
+                label="Character"
+                hint="Saved from your cast library. Guides how people are described in the script."
+              >
                 <Select value={characterId} onValueChange={setCharacterId}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">No specific character</SelectItem>
-                    {characters.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    {characters.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="Voice" hint="Stored with the ad and used for the voiceover script. Spoken audio needs a voice provider key (not connected).">
+              <Field
+                label="Voice"
+                hint="Stored with the ad and used for the voiceover script. Spoken audio needs a voice provider key (not connected)."
+              >
                 <Select value={voiceId} onValueChange={setVoiceId}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">No voice selected</SelectItem>
-                    {voices.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    {voices.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </Field>
               {characters.length === 0 && voices.length === 0 && (
                 <p className="text-sm text-muted-foreground">
-                  Your cast library is empty — you can add characters and voices later from the Cast page. This step is optional.
+                  Your cast library is empty — you can add characters and voices later from the Cast
+                  page. This step is optional.
                 </p>
               )}
               <div className="rounded-lg border border-border/60 bg-card/40 p-4 text-sm text-muted-foreground">
@@ -444,19 +698,25 @@ function CreateAd() {
         </div>
 
         <div className="mt-6 flex items-center justify-between">
-          <Button variant="ghost" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>Back</Button>
+          <Button variant="ghost" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>
+            Back
+          </Button>
           {step < STEPS.length - 1 ? (
             <Button
               variant="hero"
               disabled={!canContinue}
-              onClick={() => (canContinue ? setStep((s) => s + 1) : toast.error("Add a business name first"))}
+              onClick={() =>
+                canContinue ? setStep((s) => s + 1) : toast.error("Add a business name first")
+              }
             >
               Continue
             </Button>
           ) : (
             <Button variant="hero" disabled={mutation.isPending} onClick={() => mutation.mutate()}>
               {mutation.isPending ? <Loader2 className="animate-spin" /> : <Sparkles />}
-              {mutation.isPending ? "Writing your ad…" : `Generate ad (${PLAN_CREDIT_COST} credits)`}
+              {mutation.isPending
+                ? "Writing your ad…"
+                : `Generate ad (${PLAN_CREDIT_COST} credits)`}
             </Button>
           )}
         </div>
@@ -465,7 +725,15 @@ function CreateAd() {
   );
 }
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
   const id = useId();
   const control =
     isValidElement(children) && !(children as ReactElement<{ id?: string }>).props.id
@@ -479,4 +747,3 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
     </div>
   );
 }
-

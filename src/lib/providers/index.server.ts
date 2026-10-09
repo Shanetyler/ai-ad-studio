@@ -43,7 +43,9 @@ function mockPlan(business: BusinessInfo, style: AdStyle, character?: ScriptChar
     {
       title: "The problem",
       description: `Everyday frustration your customer feels before finding ${name}.`,
-      caption: business.target_customer ? `For ${business.target_customer}` : "Tired of settling for less?",
+      caption: business.target_customer
+        ? `For ${business.target_customer}`
+        : "Tired of settling for less?",
     },
     {
       title: character ? `Meet ${character.name}` : "Meet the pro",
@@ -55,7 +57,9 @@ function mockPlan(business: BusinessInfo, style: AdStyle, character?: ScriptChar
     {
       title: "The work",
       description: business.products || "The service in motion: careful, fast, professional.",
-      caption: business.products ? business.products.split(/[,.]/)[0]!.trim() : "Done right the first time",
+      caption: business.products
+        ? business.products.split(/[,.]/)[0]!.trim()
+        : "Done right the first time",
     },
     {
       title: "The result",
@@ -105,7 +109,12 @@ function mockPlan(business: BusinessInfo, style: AdStyle, character?: ScriptChar
     ]
       .filter(Boolean)
       .join(" "),
-    music_style: style.tone === "Luxury" ? "Cinematic, elegant piano" : style.tone === "Energetic" ? "Upbeat electronic" : "Confident modern pop",
+    music_style:
+      style.tone === "Luxury"
+        ? "Cinematic, elegant piano"
+        : style.tone === "Energetic"
+          ? "Upbeat electronic"
+          : "Confident modern pop",
     captions_enabled: true,
     palette: { primary: "#f59e0b", secondary: "#111827" },
     font: "display",
@@ -117,7 +126,11 @@ function mockPlan(business: BusinessInfo, style: AdStyle, character?: ScriptChar
 class MockAIProvider implements AIProvider {
   id = "easyad-template-engine";
   mode = "mock" as const;
-  async generateAdScript(input: { business: BusinessInfo; style: AdStyle; character?: ScriptCharacter }) {
+  async generateAdScript(input: {
+    business: BusinessInfo;
+    style: AdStyle;
+    character?: ScriptCharacter;
+  }) {
     return mockPlan(input.business, input.style, input.character);
   }
 }
@@ -197,7 +210,12 @@ class MockVideoProvider implements VideoProvider {
 class FalVideoProvider implements VideoProvider {
   id = "fal-ai/kling-video";
   mode = "real" as const;
-  async generateScene(input: { prompt: string; aspect: string; duration: number; imageUrl?: string }) {
+  async generateScene(input: {
+    prompt: string;
+    aspect: string;
+    duration: number;
+    imageUrl?: string;
+  }) {
     const key = env("FAL_KEY");
     const path = input.imageUrl
       ? "fal-ai/kling-video/v2/master/image-to-video"
@@ -212,7 +230,8 @@ class FalVideoProvider implements VideoProvider {
         ...(input.imageUrl ? { image_url: input.imageUrl } : {}),
       }),
     });
-    if (!res.ok) return { id: "", status: "failed" as const, error: `Provider error ${res.status}` };
+    if (!res.ok)
+      return { id: "", status: "failed" as const, error: `Provider error ${res.status}` };
     const json = (await res.json()) as { request_id: string };
     return { id: json.request_id, status: "queued" as const };
   }
@@ -223,7 +242,11 @@ class FalVideoProvider implements VideoProvider {
     if (!res.ok) return { id, status: "failed" as const, error: `Provider error ${res.status}` };
     const json = (await res.json()) as { status: string };
     const status =
-      json.status === "COMPLETED" ? "succeeded" : json.status === "IN_PROGRESS" ? "running" : "queued";
+      json.status === "COMPLETED"
+        ? "succeeded"
+        : json.status === "IN_PROGRESS"
+          ? "running"
+          : "queued";
     return { id, status: status as "queued" | "running" | "succeeded" };
   }
   async downloadVideo(id: string) {
@@ -245,8 +268,7 @@ class MockVoiceProvider implements VoiceProvider {
     return {
       audioBase64: null,
       mime: null,
-      note:
-        "Demo mode: no voice service is configured, so the ad renders with captions and a music bed. Connect a voice provider to add narration.",
+      note: "Demo mode: no voice service is configured, so the ad renders with captions and a music bed. Connect a voice provider to add narration.",
     };
   }
 }
@@ -332,7 +354,10 @@ export function providerStatus(): ProviderStatus {
         id: ai.id,
         mode: ai.mode,
         configured: ai.mode === "real",
-        note: ai.mode === "real" ? "Scripts written by AI." : "Scripts built from Easy Ad's template engine.",
+        note:
+          ai.mode === "real"
+            ? "Scripts written by AI."
+            : "Scripts built from Easy Ad's template engine.",
       },
       {
         kind: "video",
@@ -349,16 +374,28 @@ export function providerStatus(): ProviderStatus {
         id: voice.id,
         mode: voice.mode,
         configured: voice.mode === "real",
-        note: voice.mode === "real" ? "AI narration enabled." : "Captions + music bed only. Add ELEVENLABS_API_KEY for narration.",
+        note:
+          voice.mode === "real"
+            ? "AI narration enabled."
+            : "Captions + music bed only. Add ELEVENLABS_API_KEY for narration.",
       },
       {
         kind: "image",
         id: image.id,
         mode: image.mode,
         configured: image.mode === "real",
-        note: image.mode === "real" ? "AI scene imagery available." : "Generated gradients and motion graphics.",
+        note:
+          image.mode === "real"
+            ? "AI scene imagery available."
+            : "Generated gradients and motion graphics.",
       },
-      { kind: "media", id: media.id, mode: media.mode, configured: true, note: "Built-in demo media library." },
+      {
+        kind: "media",
+        id: media.id,
+        mode: media.mode,
+        configured: true,
+        note: "Built-in demo media library.",
+      },
     ],
   };
 }
