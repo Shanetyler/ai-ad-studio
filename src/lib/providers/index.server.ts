@@ -29,7 +29,7 @@ function sceneCount(duration: number) {
   return 7;
 }
 
-function mockPlan(business: BusinessInfo, style: AdStyle): AdPlan {
+function mockPlan(business: BusinessInfo, style: AdStyle, character?: ScriptCharacter): AdPlan {
   const name = business.business_name || "Your business";
   const where = business.location ? ` in ${business.location}` : "";
   const offer = business.offer?.trim();
@@ -45,9 +45,11 @@ function mockPlan(business: BusinessInfo, style: AdStyle): AdPlan {
       caption: business.target_customer ? `For ${business.target_customer}` : "Tired of settling for less?",
     },
     {
-      title: "Meet the pro",
-      description: `${name}${where} steps in — ${business.description || business.products || "doing the work properly"}.`,
-      caption: `${name}${where}`,
+      title: character ? `Meet ${character.name}` : "Meet the pro",
+      description: character
+        ? `${character.name} introduces ${name}${where} — ${business.description || business.products || "doing the work properly"}. ${character.appearance_prompt}`
+        : `${name}${where} steps in — ${business.description || business.products || "doing the work properly"}.`,
+      caption: character ? `${character.name} for ${name}` : `${name}${where}`,
     },
     {
       title: "The work",
