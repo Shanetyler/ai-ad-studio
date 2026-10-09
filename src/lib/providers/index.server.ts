@@ -116,18 +116,26 @@ function mockPlan(business: BusinessInfo, style: AdStyle, character?: ScriptChar
 class MockAIProvider implements AIProvider {
   id = "easyad-template-engine";
   mode = "mock" as const;
-  async generateAdScript(input: { business: BusinessInfo; style: AdStyle }) {
-    return mockPlan(input.business, input.style);
+  async generateAdScript(input: { business: BusinessInfo; style: AdStyle; character?: ScriptCharacter }) {
+    return mockPlan(input.business, input.style, input.character);
   }
 }
 
 class GatewayAIProvider implements AIProvider {
   id = "lovable-ai-gateway";
   mode = "real" as const;
-  async generateAdScript(input: { business: BusinessInfo; style: AdStyle; brandTone?: string }) {
-    const { business, style } = input;
+  async generateAdScript(input: {
+    business: BusinessInfo;
+    style: AdStyle;
+    brandTone?: string;
+    character?: ScriptCharacter;
+  }) {
+    const { business, style, character } = input;
     const n = sceneCount(style.duration);
-    const fallback = mockPlan(business, style);
+    const fallback = mockPlan(business, style, character);
+    const characterCtx = character
+      ? `\nOn-screen spokesperson: ${character.name}. Appearance: ${character.appearance_prompt}. Voice direction: ${character.voice_direction}. Feature ${character.name} consistently across scenes (same person, same look); write scene descriptions that include them where a person appears, and write the voiceover in their voice.`
+      : "";
     try {
       const out = await aiJson<{
         hook: string;
