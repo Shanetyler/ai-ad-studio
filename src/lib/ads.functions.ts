@@ -100,6 +100,7 @@ export const generateAdPlan = createServerFn({ method: "POST" })
         style: StyleSchema,
         brandId: z.string().uuid().optional(),
         projectId: z.string().uuid().optional(),
+        characterId: z.string().uuid().optional(),
       })
       .parse(input),
   )
@@ -107,6 +108,34 @@ export const generateAdPlan = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const business = data.business as BusinessInfo;
     const style = data.style as AdStyle;
+
+    // Resolve the selected character before spending credits. The character must
+    // belong to this user and have confirmed rights; trusted server-side fields
+    // (never client-supplied prompts) feed the script provider.
+    let character:
+      | { id: string; name: string; appearance_prompt: string; voice_direction: string; seed?: number }
+      | undefined;
+    if (data.characterId) {
+      const { data: owned } = await supabase
+        .from("cast_members")
+        .select("id, rights_confirmed")
+        .eq("id", data.characterId)
+        .eq("owner_id", userId)
+        .maybeSingle();
+      if (!owned) throw new Error("That character was not found in your cast. Pick one of your saved characters.");
+      if (!owned.rights_confirmed)
+        throw new Error("This character's rights are not confirmed. Confirm usage rights in Character Studio first.");
+      const { loadCharacterProduction } = await import("@/lib/character.server");
+      const prod = await loadCharacterProduction(supabase, data.characterId);
+      if (!prod) throw new Error("Could not load the selected character. Try again or pick another character.");
+      character = {
+        id: prod.id,
+        name: prod.name,
+        appearance_prompt: prod.appearance_prompt,
+        voice_direction: prod.voice_direction,
+        ...(prod.seed !== undefined ? { seed: prod.seed } : {}),
+      };
+    }
 
     const { data: job, error: jErr } = await supabase
       .from("jobs")
