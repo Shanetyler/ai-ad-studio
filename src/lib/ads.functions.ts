@@ -424,6 +424,8 @@ export const startAdRender = createServerFn({ method: "POST" })
     const { providerStatus } = await import("@/lib/providers/index.server");
     const status = providerStatus();
 
+    await assertBalance(context, userId, RENDER_CREDIT_COST);
+
     const { data: job, error: jErr } = await supabase
       .from("jobs")
       .insert({
@@ -439,7 +441,7 @@ export const startAdRender = createServerFn({ method: "POST" })
       .single();
     if (jErr) throw new Error(jErr.message);
 
-    await consume(context, userId, RENDER_CREDIT_COST, "ad_render", job.id);
+    await consumeForJob(context, userId, RENDER_CREDIT_COST, "ad_render", job.id);
 
     await supabase
       .from("projects")
