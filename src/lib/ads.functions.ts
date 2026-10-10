@@ -189,7 +189,18 @@ export const generateAdPlan = createServerFn({ method: "POST" })
     await assertBalance(context, userId, PLAN_CREDIT_COST);
 
     const { data: job, error: jErr } = await supabase
-...
+      .from("jobs")
+      .insert({
+        owner_id: userId,
+        project_id: data.projectId ?? null,
+        kind: "script",
+        status: "running",
+        cost_credits: PLAN_CREDIT_COST,
+        started_at: new Date().toISOString(),
+        input_json: { business, style },
+      })
+      .select("id")
+      .single();
     if (jErr) throw new Error(jErr.message);
 
     await consumeForJob(context, userId, PLAN_CREDIT_COST, "ad_plan", job.id);
