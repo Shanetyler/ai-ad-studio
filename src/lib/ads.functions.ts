@@ -81,6 +81,44 @@ async function consume(ctx: any, userId: string, amount: number, reason: string,
   }
 }
 
+export const INSUFFICIENT_CREDITS_MESSAGE =
+  "Not enough credits. Upgrade your plan to keep creating ads.";
+
+/** Rejects before any job row is created when the balance can't cover the cost. */
+async function assertBalance(ctx: any, userId: string, amount: number) {
+  const { data, error } = await ctx.supabase.rpc("credit_balance", { _user_id: userId });
+  if (error) throw new Error("Could not check your credit balance. Please try again.");
+  const balance = (data as number | null) ?? 0;
+  if (balance < amount) {
+    throw new Error(
+      `Not enough credits: this needs ${amount} and you have ${balance}. Top up on the Credits page to continue.`,
+    );
+  }
+}
+
+/** Charges for a job; if the charge fails the job is marked failed so it never stays running. */
+async function consumeForJob(
+  ctx: any,
+  userId: string,
+  amount: number,
+  reason: string,
+  jobId: string,
+) {
+  try {
+    await consume(ctx, userId, amount, reason, jobId);
+  } catch (err) {
+    await ctx.supabase
+      .from("jobs")
+      .update({
+        status: "failed",
+        error: String(err instanceof Error ? err.message : err).slice(0, 400),
+        finished_at: new Date().toISOString(),
+      })
+      .eq("id", jobId);
+    throw err;
+  }
+}
+
 async function refund(ctx: any, userId: string, amount: number, reason: string, jobId?: string) {
   await ctx.supabase.rpc("refund_credits", {
     _user_id: userId,
