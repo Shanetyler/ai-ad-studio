@@ -81,9 +81,6 @@ async function consume(ctx: any, userId: string, amount: number, reason: string,
   }
 }
 
-export const INSUFFICIENT_CREDITS_MESSAGE =
-  "Not enough credits. Upgrade your plan to keep creating ads.";
-
 /** Rejects before any job row is created when the balance can't cover the cost. */
 async function assertBalance(ctx: any, userId: string, amount: number) {
   const { data, error } = await ctx.supabase.rpc("credit_balance", { _user_id: userId });
@@ -189,22 +186,13 @@ export const generateAdPlan = createServerFn({ method: "POST" })
       };
     }
 
+    await assertBalance(context, userId, PLAN_CREDIT_COST);
+
     const { data: job, error: jErr } = await supabase
-      .from("jobs")
-      .insert({
-        owner_id: userId,
-        project_id: data.projectId ?? null,
-        kind: "script",
-        status: "running",
-        cost_credits: PLAN_CREDIT_COST,
-        started_at: new Date().toISOString(),
-        input_json: { business, style },
-      })
-      .select("id")
-      .single();
+...
     if (jErr) throw new Error(jErr.message);
 
-    await consume(context, userId, PLAN_CREDIT_COST, "ad_plan", job.id);
+    await consumeForJob(context, userId, PLAN_CREDIT_COST, "ad_plan", job.id);
 
     let plan: AdPlan;
     try {
