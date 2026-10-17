@@ -180,8 +180,11 @@ function CreateAd() {
     }
   }
 
+  const [genError, setGenError] = useState<string | null>(null);
+
   const mutation = useMutation({
     mutationFn: async () => {
+      setGenError(null);
       const res = await generate({
         data: {
           business: { ...business, cta: business.cta || "Call today" },
