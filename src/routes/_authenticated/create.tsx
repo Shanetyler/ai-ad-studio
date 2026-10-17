@@ -215,7 +215,11 @@ function CreateAd() {
       toast.success("Script and storyboard ready");
       navigate({ to: "/ads/$adId", params: { adId: projectId } });
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not generate the ad"),
+    onError: (e) => {
+      const msg = e instanceof Error ? e.message : "Could not generate the ad";
+      setGenError(msg);
+      toast.error(msg);
+    },
   });
 
   const canContinue = step !== 0 || business.business_name.trim().length > 1;
