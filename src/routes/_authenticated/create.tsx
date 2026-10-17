@@ -704,6 +704,29 @@ function CreateAd() {
           )}
         </div>
 
+        {genError && (
+          <div
+            role="alert"
+            className="mt-6 flex items-start justify-between gap-3 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm"
+          >
+            <div>
+              <p className="font-medium text-destructive">Couldn’t generate the ad</p>
+              <p className="mt-1 text-muted-foreground">{genError}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Nothing was charged. Fix the issue above and try again.
+              </p>
+            </div>
+            <button
+              type="button"
+              aria-label="Dismiss"
+              onClick={() => setGenError(null)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         <div className="mt-6 flex items-center justify-between">
           <Button variant="ghost" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>
             Back
