@@ -305,6 +305,16 @@ function AdEditor() {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
         <div className="space-y-6">
           <div className="panel p-4">
+            {!videoUrl && !busy && phase !== "error" && (
+              <div className="mb-4 rounded-lg border border-border bg-muted/40 p-3 text-sm">
+                <p className="font-medium">Script &amp; storyboard saved — no video rendered yet</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  The preview below is a live sketch of your plan, not a finished video. Use “Export
+                  video” to render a real file in your browser; it then appears here with a download
+                  button. Cloud rendering isn’t configured on this workspace.
+                </p>
+              </div>
+            )}
             <AdPreview plan={plan} aspect={aspect} />
             {busy && (
               <div className="mt-4 space-y-2">
